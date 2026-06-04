@@ -460,7 +460,12 @@ const RomPatcherWeb = (function () {
 
 		if (WEB_CRYPTO_AVAILABLE) {
 			romFile.hashSHA1().then(function (res) {
+				romFile._sha1 = res;
 				htmlElements.setText('span-sha1', res);
+				/* re-validate after SHA1 resolves, in case patch expects SHA1 validation */
+				if (patch && typeof patch.validateSource === 'function') {
+					_setElementsStatus(true, RomPatcherWeb.validateCurrentRom(event.data.checksumStartOffset));
+				}
 			});
 		}
 
@@ -916,6 +921,15 @@ const RomPatcherWeb = (function () {
 								htmlElements.removeClass('row-patch-description', 'show');
 							}
 
+							/* inject romhash override if set (via ?romhash= URL param),
+							   before onloadpatch runs so RomM can read it too */
+							if (typeof RomPatcherWeb.getRomHashOverride === 'function') {
+								var _rh = RomPatcherWeb.getRomHashOverride();
+								if (_rh && !embededPatchInfo && typeof patch.getValidationInfo !== 'function') {
+									RomPatcherWeb.setRomHashValidation(_rh.type, _rh.value);
+								}
+							}
+
 							RomPatcherWeb.validateCurrentRom(_getChecksumStartOffset());
 
 							if (typeof settings.onloadpatch === 'function') {
@@ -1112,6 +1126,66 @@ const RomPatcherWeb = (function () {
 
 		enable: function () {
 			htmlElements.enableAll();
+		},
+
+		setRomHashValidation: function (hashType, hashValue) {
+			if (!patch) return false;
+			/* don't override if patch already has validation */
+			if (typeof patch.validateSource === 'function') return false;
+			if (hashType === 'CRC32') {
+				var crcVal = typeof hashValue === 'number' ? hashValue : parseInt(hashValue, 16);
+				patch.validateSource = function (romFile, headerSize) {
+					return romFile.hashCRC32(headerSize) === crcVal;
+				};
+				patch.getValidationInfo = function () {
+					return { type: 'CRC32', value: [crcVal] };
+				};
+			} else if (hashType === 'MD5') {
+				var md5Val = String(hashValue).toLowerCase();
+				patch.validateSource = function (romFile, headerSize) {
+					return romFile.hashMD5(headerSize) === md5Val;
+				};
+				patch.getValidationInfo = function () {
+					return { type: 'MD5', value: [md5Val] };
+				};
+			} else if (hashType === 'SHA1') {
+				var sha1Val = String(hashValue).toLowerCase();
+				patch.validateSource = function (romFile, headerSize) {
+					if (romFile._sha1)
+						return romFile._sha1 === sha1Val;
+					/* SHA1 not computed yet — skip validation, will re-validate when it resolves */
+					return (romFile && patch);
+				};
+				patch.getValidationInfo = function () {
+					return { type: 'SHA1', value: [sha1Val] };
+				};
+			} else {
+				return false;
+			}
+
+			/* display hash in ROM requirements row, same as embedded patch info */
+			if (htmlElements.get('row-patch-requirements') && htmlElements.get('patch-requirements-value')) {
+				var validationInfo = patch.getValidationInfo();
+				htmlElements.setText('patch-requirements-value', '');
+				htmlElements.setText('patch-requirements-type', _('Required %s:').replace('%s', _(validationInfo.type)));
+				var values = Array.isArray(validationInfo.value) ? validationInfo.value : [validationInfo.value];
+				values.forEach(function (value) {
+					var line = document.createElement('div');
+					if (typeof value !== 'string') {
+						if (validationInfo.type === 'CRC32') {
+							value = value.toString(16);
+							while (value.length < 8) value = '0' + value;
+						} else {
+							value = value.toString();
+						}
+					}
+					line.innerHTML = value;
+					htmlElements.get('patch-requirements-value').appendChild(line);
+				});
+				htmlElements.addClass('row-patch-requirements', 'show');
+			}
+
+			return true;
 		},
 		disable: function () {
 			htmlElements.disableAll();
@@ -1714,25 +1788,6 @@ const PatchBuilderWeb = (function (romPatcherWeb) {
 		}
 	}
 }(RomPatcherWeb));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const ROM_PATCHER_LOCALE = {
 	'fr': {

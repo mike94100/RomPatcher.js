@@ -46,7 +46,7 @@ const buildSettingsForWebapp = function () {
 		allowDropFiles: true,
 		ondropfiles:function(evt){
 			if(currentMode === 'creator'){
-				ocument.getElementById('switch-create-button').click();
+				document.getElementById('switch-create-button').click();
 			}
 		}
 	};
@@ -127,13 +127,36 @@ window.addEventListener('load', function (evt) {
 
 	try {
 		const initialSettings = buildSettingsForWebapp();
-		RomPatcherWeb.initialize(initialSettings);
 
 		/* check for remote file URL parameters */
 		const urlParams = new URLSearchParams(window.location.search);
 		const remotePatchFileUrl = urlParams.get('patchfile');
 		const remoteRomFileUrl = urlParams.get('romfile');
+		const remoteRomHash = urlParams.get('romhash');
 		const hasRemoteFiles = remotePatchFileUrl || remoteRomFileUrl;
+
+		/* parse romhash parameter: auto-detect type by length */
+		const _parsedRomHash = (function () {
+			if (!remoteRomHash) return null;
+			var h = remoteRomHash.trim().toLowerCase().replace('0x', '');
+			if (/^[0-9a-f]{8}$/.test(h)) return { type: 'CRC32', value: parseInt(h, 16) };
+			if (/^[0-9a-f]{32}$/.test(h)) return { type: 'MD5', value: h };
+			if (/^[0-9a-f]{40}$/.test(h)) return { type: 'SHA1', value: h };
+			return null;
+		})();
+
+		/* store romhash globally so providePatchFile can inject it before onloadpatch callbacks */
+		if (_parsedRomHash) {
+			var _romHashOverride = _parsedRomHash;
+			RomPatcherWeb.setRomHashOverride = function (hashType, hashValue) {
+				_romHashOverride = { type: hashType, value: hashValue };
+			};
+			RomPatcherWeb.getRomHashOverride = function () {
+				return _romHashOverride || null;
+			};
+		}
+
+		RomPatcherWeb.initialize(initialSettings);
 
 		if (hasRemoteFiles) {
 			var remoteFilesLoaded = { rom: !remoteRomFileUrl, patch: !remotePatchFileUrl };
