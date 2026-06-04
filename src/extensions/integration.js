@@ -71,7 +71,7 @@ const ClientIntegration = (function () {
 				hashes.crc_hash = crcHex;
 			} else if (info.type === 'MD5' && crcValue != null) {
 				hashes.md5_hash = String(crcValue).toLowerCase().replace('0x', '');
-			} else if (info.type === 'SHA1' && crcValue != null) {
+			} else if (info.type === 'SHA-1' && crcValue != null) {
 				hashes.sha1_hash = String(crcValue).toLowerCase();
 			}
 			if (Object.keys(hashes).length) _cachedHashes = hashes;
@@ -340,7 +340,7 @@ const ClientIntegration = (function () {
 									if (searchInput && toggleBtn) {
 										_searchMode = 'hash';
 										toggleBtn.textContent = 'Switch to Name';
-										searchInput.placeholder = 'Enter CRC32, MD5 or SHA1...';
+										searchInput.placeholder = 'Enter CRC32, MD5 or SHA-1...';
 										searchInput.value = _cachedHashes.crc_hash || _cachedHashes.md5_hash || _cachedHashes.sha1_hash || '';
 									}
 									setTimeout(function () { _doSearch(client, romSourceHooks); }, 200);
@@ -363,7 +363,7 @@ const ClientIntegration = (function () {
 				toggleBtn.addEventListener('click', function () {
 					_searchMode = (_searchMode === 'hash') ? 'name' : 'hash';
 					toggleBtn.textContent = _searchMode === 'hash' ? 'Switch to Name' : 'Switch to Hash';
-					searchInput.placeholder = _searchMode === 'hash' ? 'Enter CRC32, MD5 or SHA1...' : 'Search ROM name...';
+					searchInput.placeholder = _searchMode === 'hash' ? 'Enter CRC32, MD5 or SHA-1...' : 'Search ROM name...';
 					searchInput.value = '';
 					const resultsEl = document.getElementById('client-search-results');
 					if (resultsEl) resultsEl.style.display = 'none';
@@ -479,7 +479,7 @@ const ClientIntegration = (function () {
 		const val = searchInput.value.trim();
 		if (_searchMode === 'hash') {
 			const hashes = _parseHashStr(val);
-			if (!hashes) { alert('Invalid hash. 8 hex=CRC32, 32=MD5, 40=SHA1'); return; }
+			if (!hashes) { alert('Invalid hash. 8 hex=CRC32, 32=MD5, 40=SHA-1'); return; }
 			if (typeof hooks.onSearchByHash === 'function') await hooks.onSearchByHash(client, hashes);
 		} else {
 			if (typeof hooks.onSearchByName === 'function') await hooks.onSearchByName(client, val);

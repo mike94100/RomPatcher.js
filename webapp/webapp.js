@@ -344,7 +344,7 @@ window.addEventListener('load', function (evt) {
 			var h = remoteRomHash.trim().toLowerCase().replace('0x', '');
 			if (/^[0-9a-f]{8}$/.test(h)) return { type: 'CRC32', value: parseInt(h, 16) };
 			if (/^[0-9a-f]{32}$/.test(h)) return { type: 'MD5', value: h };
-			if (/^[0-9a-f]{40}$/.test(h)) return { type: 'SHA1', value: h };
+			if (/^[0-9a-f]{40}$/.test(h)) return { type: 'SHA-1', value: h };
 			return null;
 		})();
 

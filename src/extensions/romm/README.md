@@ -27,8 +27,8 @@ src/extensions/
 
 ## Features
 
-- **Auto-lookup**: When a patch file containing CRC32/MD5/SHA1 hashes is loaded, the extension automatically searches RomM for a matching ROM and loads it.
-- **Manual search**: Search by hash (CRC32, MD5, SHA1) or by name.
+- **Auto-lookup**: When a patch file containing CRC32/MD5/SHA-1 hashes is loaded, the extension automatically searches RomM for a matching ROM and loads it.
+- **Manual search**: Search by hash (CRC32, MD5, SHA-1) or by name.
 - **Download**: Download patched ROM locally, with optional ZIP compression.
 - **Upload**: Upload patched ROM to RomM server, with automatic library rescan.
 - **Custom output name**: Specify a custom filename for the output ROM.

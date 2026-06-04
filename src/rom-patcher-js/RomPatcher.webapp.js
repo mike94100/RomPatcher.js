@@ -1148,16 +1148,16 @@ const RomPatcherWeb = (function () {
 				patch.getValidationInfo = function () {
 					return { type: 'MD5', value: [md5Val] };
 				};
-			} else if (hashType === 'SHA1') {
+			} else if (hashType === 'SHA-1') {
 				var sha1Val = String(hashValue).toLowerCase();
 				patch.validateSource = function (romFile, headerSize) {
 					if (romFile._sha1)
 						return romFile._sha1 === sha1Val;
-					/* SHA1 not computed yet — skip validation, will re-validate when it resolves */
+					/* SHA-1 not computed yet — skip validation, will re-validate when it resolves */
 					return (romFile && patch);
 				};
 				patch.getValidationInfo = function () {
-					return { type: 'SHA1', value: [sha1Val] };
+					return { type: 'SHA-1', value: [sha1Val] };
 				};
 			} else {
 				return false;
