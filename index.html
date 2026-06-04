@@ -55,7 +55,7 @@
 <!-- APP -->
 <div id="wrapper">
 	<div id="tab-bar" class="tab-bar">
-		<button id="tab-patcher" class="tab-button active" data-tab="patcher">Patch</button>
+		<button id="tab-patcher" class="tab-button active" data-tab="patcher">Patcher</button>
 		<button id="tab-creator" class="tab-button" data-tab="creator">Creator</button>
 		<button id="tab-url-builder" class="tab-button" data-tab="url-builder">URL Builder</button>
 	</div>
@@ -233,6 +233,12 @@
 					<div style="margin-top:4px">
 						<span id="url-builder-status-romhash" class="text-muted" style="font-size:11px"></span>
 					</div>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div class="text-right"><label>Output name:</label></div>
+				<div class="rom-patcher-container-input">
+					<input type="text" id="url-builder-outputname" placeholder="Custom output filename (no extension)" style="width:100%;box-sizing:border-box;padding:6px" />
 				</div>
 			</div>
 			<div class="row m-b">

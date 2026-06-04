@@ -2,19 +2,23 @@
 A ROM patcher based on RomPatcherJS with additional functionality.
 
 ## URL Parameters
-URL parameters allow for custom data to be loaded on the site:
-* patchfile - Download and set patch file by URL (Must allow CORS)
-* romfile - Download and set ROM file by URL (Must allow CORS)
-* romhash - Set a required source CRC32, MD5, or SHA-1 hash for patches that do not provide it
+URL parameters allow for data to be loaded on the site automatically:
+* patchfile - URL to download and set as patch file (Must allow CORS)
+* romfile - URL to download and set as rom file (Must allow CORS)
+* romhash - Hash/Checksum (CRC32, MD5, or SHA-1) the patch file requires for the ROM
+* outputname - Name for the patched ROM file, may be edited by users
 
 ## Server Integration:
-Server integrations allow for reading and writing data to self-hosted ROM managers. All settings are stored locally in browser. Options available to import and export as json.
+Server integrations allow for reading and writing data to self-hosted ROM managers.
+
+* Settings are stored locally, API keys stay on device
+* Settings can be imported & exported as json
 
 ### Romm
 * Settings
   * url - Publicly accessible path to your Romm instance
-  * apikey - Configured API Key for a Romm user
-* API Key Scopes:
+  * apikey - Configured API key for a Romm user
+* API key Scopes:
   * roms.read - Download ROM from your library for patching
   * roms.write - Upload patched ROM to your library
   * platforms.read - Get platforms for selecting where to upload patched ROM
@@ -22,5 +26,8 @@ Server integrations allow for reading and writing data to self-hosted ROM manage
 
 ## Usage
 ```bash
-https://mike94100.github.io/RomPatcher.js/?patchfile=<URL>&romfile=<URL>&romhash=<CRC32/MD5/SHA1>
+https://mike94100.github.io/RomPatcher.js/?patchfile=<URL>&romfile=<URL>&romhash=<CRC32/MD5/SHA1>&outputname=<STRING>
 ```
+
+## Examples
+[Pokemon Sienna ips patch - Base FireRed Rev 0 - sets patchfile, romhash, outputname](https://mike94100.github.io/RomPatcher.js/?patchfile=https%3A%2F%2Fraw.githubusercontent.com%2Fmike94100%2Frompatcher-rs%2Frefs%2Fheads%2Fmain%2Fpatches%2FPokemon_Sienna_(Complete)_(FireRed).ips&romhash=41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc&outputname=Pokemon%20Sienna%20(Rev%206)%20(Hack))

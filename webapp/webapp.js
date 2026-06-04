@@ -38,6 +38,18 @@ if (typeof localStorage !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_SE
 		console.error('Error while loading settings: ' + err.message);
 	}
 }
+/* Latest patched ROM, captured from RomPatcherWeb's onpatch callback so
+   the standalone download handler can use it without poking into the
+   private module-level state of RomPatcherWeb. */
+var _latestPatchedRom = null;
+/* When the user clicks Download before clicking Apply, we need to first
+   run the patch, then download. This flag is set by the download handler
+   and read by the onpatch callback. */
+var _pendingDownload = false;
+/* Reference to the standalone download routine. Assigned below; read from
+   the onpatch callback in buildSettingsForWebapp. */
+var _standaloneRunDownload = null;
+
 const buildSettingsForWebapp = function () {
 	return {
 		language: settings.language,
@@ -47,6 +59,44 @@ const buildSettingsForWebapp = function () {
 		ondropfiles:function(evt){
 			if(currentTab === 'creator'){
 				/* already on creator tab, nothing to switch */
+			}
+		},
+		/* Reveal the Output section (name + zip) when a ROM is valid or a patch
+		   is applied. This is also the responsibility of any server extension
+		   (RomM) when configured, but we register it here so the section becomes
+		   available regardless of whether an extension is loaded. If a server
+		   extension also registers a callback, it will overwrite ours — but its
+		   callback does the same reveal work, so behaviour stays correct. */
+		onvalidaterom: function (romFile, validRom) {
+			if (!validRom) return;
+			var outputSection = document.getElementById('client-output-section');
+			if (outputSection) outputSection.style.display = '';
+			var dlBtn = document.getElementById('client-btn-download');
+			if (dlBtn) dlBtn.disabled = false;
+			/* pre-populate a default output name if the user hasn't typed one */
+			var nameInput = document.getElementById('client-output-name');
+			if (nameInput && !nameInput.value.trim() && romFile) {
+				var baseName = romFile.fileName.replace(/\.[^.]+$/, '');
+				nameInput.value = baseName + ' (patched)';
+				nameInput.placeholder = baseName + ' (patched)';
+			}
+		},
+		onpatch: function (patchedRom) {
+			_latestPatchedRom = patchedRom;
+			var outputSection = document.getElementById('client-output-section');
+			if (outputSection) outputSection.style.display = '';
+			var dlBtn = document.getElementById('client-btn-download');
+			if (dlBtn) dlBtn.disabled = false;
+			var nameInput = document.getElementById('client-output-name');
+			if (nameInput && !nameInput.value.trim()) {
+				var baseName = patchedRom.fileName.replace(/\.[^.]+$/, '');
+				nameInput.value = baseName + ' (patched)';
+				nameInput.placeholder = baseName + ' (patched)';
+			}
+			/* If the standalone download handler set a flag, run the download now */
+			if (_pendingDownload && typeof _standaloneRunDownload === 'function') {
+				_pendingDownload = false;
+				_standaloneRunDownload(patchedRom);
 			}
 		}
 	};
@@ -143,6 +193,7 @@ window.addEventListener('load', function (evt) {
 		var elPatchUrl = document.getElementById('url-builder-patchfile');
 		var elRomUrl = document.getElementById('url-builder-romfile');
 		var elRomHash = document.getElementById('url-builder-romhash');
+		var elOutputName = document.getElementById('url-builder-outputname');
 		var elOutput = document.getElementById('url-builder-output');
 		var elStatusPatch = document.getElementById('url-builder-status-patchfile');
 		var elStatusRom = document.getElementById('url-builder-status-romfile');
@@ -159,10 +210,12 @@ window.addEventListener('load', function (evt) {
 				var pf = params.get('patchfile');
 				var rf = params.get('romfile');
 				var rh = params.get('romhash');
+				var on = params.get('outputname');
 				if (pf) elPatchUrl.value = pf;
 				if (rf) elRomUrl.value = rf;
 				if (rh) elRomHash.value = rh;
-				if (pf || rf || rh) {
+				if (on && elOutputName) elOutputName.value = on;
+				if (pf || rf || rh || on) {
 					elImportStatus.innerHTML = '<span style="color:green">Parameters imported</span>';
 				} else {
 					elImportStatus.innerHTML = '<span style="color:orange">No known parameters found in URL</span>';
@@ -207,9 +260,11 @@ window.addEventListener('load', function (evt) {
 			var pf = elPatchUrl.value.trim();
 			var rf = elRomUrl.value.trim();
 			var rh = elRomHash.value.trim();
+			var on = elOutputName ? elOutputName.value.trim() : '';
 			if (pf) params.push('patchfile=' + encodeURIComponent(pf));
 			if (rf) params.push('romfile=' + encodeURIComponent(rf));
 			if (rh) params.push('romhash=' + encodeURIComponent(rh));
+			if (on) params.push('outputname=' + encodeURIComponent(on));
 			if (params.length) elOutput.value = base + '?' + params.join('&');
 			else elOutput.value = base;
 		};
@@ -226,6 +281,7 @@ window.addEventListener('load', function (evt) {
 		elPatchUrl.addEventListener('input', _updateUrl);
 		elRomUrl.addEventListener('input', _updateUrl);
 		elRomHash.addEventListener('input', function () { _validateHash(); _updateUrl(); });
+		if (elOutputName) elOutputName.addEventListener('input', _updateUrl);
 
 		document.getElementById('url-builder-test-patchfile').addEventListener('click', function () {
 			_testUrl(elPatchUrl.value.trim(), elStatusPatch, this);
@@ -259,7 +315,28 @@ window.addEventListener('load', function (evt) {
 		const remotePatchFileUrl = urlParams.get('patchfile');
 		const remoteRomFileUrl = urlParams.get('romfile');
 		const remoteRomHash = urlParams.get('romhash');
+		const remoteOutputName = urlParams.get('outputname');
 		const hasRemoteFiles = remotePatchFileUrl || remoteRomFileUrl;
+
+		/* seed the Output name input with the ?outputname= URL parameter,
+		   only if the user hasn't typed anything yet. The output section is
+		   hidden until a ROM is validated, so we watch for it to appear. */
+		if (remoteOutputName) {
+			var _applyInitialOutputName = function () {
+				var nameInput = document.getElementById('client-output-name');
+				if (nameInput && !nameInput.value) {
+					nameInput.value = remoteOutputName;
+				}
+			};
+			var outputSection = document.getElementById('client-output-section');
+			if (outputSection) {
+				_applyInitialOutputName();
+				var _outputSectionObserver = new MutationObserver(function () {
+					_applyInitialOutputName();
+				});
+				_outputSectionObserver.observe(outputSection, { attributes: true, attributeFilter: ['style', 'class'] });
+			}
+		}
 
 		/* parse romhash parameter: auto-detect type by length */
 		const _parsedRomHash = (function () {
@@ -339,6 +416,110 @@ window.addEventListener('load', function (evt) {
 			_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
 				RomPatcherWeb.provideRomFile(remoteFile);
 				RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+			});
+		}
+
+		/* ---- Standalone Download button (no server extension required) ----
+		   Wires up #client-btn-download so the Output name and Zip output
+		   controls work even when no server extension (RomM, etc.) is
+		   configured. If a server extension is also loaded and wires this
+		   button, its handler will overwrite this one — which is fine. */
+		var _standaloneCreateZip = function (binFile, zipFileName, callback) {
+			if (typeof zip !== 'undefined' && zip && zip.ZipWriter && zip.BlobWriter && zip.Uint8ArrayReader) {
+				try {
+					var writer = new zip.ZipWriter(new zip.BlobWriter());
+					writer.add(zipFileName, new zip.Uint8ArrayReader(binFile._u8array)).then(function () {
+						return writer.close();
+					}).then(function (blob) {
+						return blob.arrayBuffer();
+					}).then(function (arrayBuffer) {
+						callback(arrayBuffer);
+					}).catch(function (err) {
+						console.warn('Standalone zip failed, falling back to raw download:', err);
+						callback(binFile._u8array.buffer);
+					});
+					return;
+				} catch (e) {
+					console.warn('Standalone zip threw, falling back to raw download:', e);
+				}
+			}
+			/* no zip lib available — download raw */
+			callback(binFile._u8array.buffer);
+		};
+		/* The actual download routine, exposed as a global so the onpatch
+		   callback (registered above) can call it once the patch is applied. */
+		_standaloneRunDownload = function (patchedRom) {
+			try {
+				var wantZip = document.getElementById('client-output-zip') && document.getElementById('client-output-zip').checked;
+				var nameInp = document.getElementById('client-output-name');
+				var origExt = patchedRom.fileName.match(/\.(\w+)$/);
+				var ext = origExt ? '.' + origExt[1] : '.bin';
+				var outName = (nameInp && nameInp.value.trim())
+					? nameInp.value.trim().replace(/\.\w+$/, '') + ext
+					: patchedRom.fileName;
+
+				var u8 = patchedRom._u8array;
+				if (!u8 || u8.byteLength === 0) {
+					alert('Patched ROM is empty.');
+					return;
+				}
+				var buffer = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+
+				var triggerDownload = function (blob, filename) {
+					var url = URL.createObjectURL(blob);
+					var a = document.createElement('a');
+					a.href = url;
+					a.download = filename;
+					a.style.display = 'none';
+					document.body.appendChild(a);
+					a.click();
+					setTimeout(function () {
+						try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+						if (a.parentNode) a.parentNode.removeChild(a);
+					}, 1000);
+				};
+
+				if (wantZip) {
+					var downloadName = outName.replace(/\.[^.]+$/, '') + '.zip';
+					var binFile = { _u8array: new Uint8Array(buffer) };
+					_standaloneCreateZip(binFile, outName, function (zipBuffer) {
+						var blob = new Blob([zipBuffer], { type: 'application/zip' });
+						triggerDownload(blob, downloadName);
+					});
+				} else {
+					var blob = new Blob([buffer], { type: 'application/octet-stream' });
+					triggerDownload(blob, outName);
+				}
+			} catch (e) {
+				console.error('Standalone download failed:', e);
+				alert('Download failed: ' + e.message);
+			}
+		};
+		var _standaloneDlBtn = document.getElementById('client-btn-download');
+		if (_standaloneDlBtn) {
+			_standaloneDlBtn.addEventListener('click', function () {
+				/* If we already have a freshly-patched ROM, use it directly. */
+				if (_latestPatchedRom) {
+					_standaloneRunDownload(_latestPatchedRom);
+					return;
+				}
+				/* Otherwise, ask RomPatcherWeb to apply the patch.
+				   The patched ROM will arrive in our onpatch callback above,
+				   which will then run _standaloneRunDownload because
+				   _pendingDownload is set. */
+				if (typeof RomPatcherWeb.applyPatch !== 'function') {
+					alert('RomPatcherWeb is not ready yet.');
+					return;
+				}
+				var applyBtn = document.getElementById('rom-patcher-button-apply');
+				if (applyBtn) {
+					applyBtn.style.display = 'inline-block';
+					applyBtn.disabled = false;
+				}
+				_pendingDownload = true;
+				RomPatcherWeb.applyPatch();
+				/* Safety timeout: if onpatch never fires, reset the flag. */
+				setTimeout(function () { _pendingDownload = false; }, 30000);
 			});
 		}
 	} catch (err) {
