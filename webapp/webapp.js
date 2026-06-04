@@ -129,13 +129,12 @@ window.addEventListener('load', function (evt) {
 		const initialSettings = buildSettingsForWebapp();
 		RomPatcherWeb.initialize(initialSettings);
 
-		/* check for remote patch file URL parameter */
+		/* check for remote file URL parameters */
 		const urlParams = new URLSearchParams(window.location.search);
-		const remotePatchFileUrl = urlParams.get('patchfile');
-		if (remotePatchFileUrl) {
-			const remoteFileName = remotePatchFileUrl.replace(/^.*[\/\\]/g, '').split('?')[0] || 'remote_patch';
-			RomPatcherWeb.getHtmlElements().setSpinner('patch', true);
-			fetch(remotePatchFileUrl)
+		const _fetchRemoteFile = function (fileUrl, fileType, onLoad) {
+			const remoteFileName = fileUrl.replace(/^.*[\/\\]/g, '').split('?')[0] || ('remote_' + fileType);
+			RomPatcherWeb.getHtmlElements().setSpinner(fileType, true);
+			fetch(fileUrl)
 				.then(function (response) {
 					if (!response.ok)
 						throw new Error('HTTP ' + response.status);
@@ -144,22 +143,37 @@ window.addEventListener('load', function (evt) {
 				.then(function (arrayBuffer) {
 					const remoteFile = new BinFile(arrayBuffer);
 					remoteFile.fileName = remoteFileName;
-					RomPatcherWeb.providePatchFile(remoteFile);
-					RomPatcherWeb.getHtmlElements().setFakeFile('patch', remoteFileName);
+					onLoad(remoteFile, remoteFileName);
 				})
-			.catch(function (err) {
-				console.error('Rom Patcher JS: Error fetching remote patch file', err);
-				RomPatcherWeb.getHtmlElements().setSpinner('patch', false);
-				RomPatcherWeb.getHtmlElements().addClass('row-error-message', 'show');
-				var errorMsg;
-				if (err instanceof TypeError && /failed to fetch/i.test(err.message)) {
-					errorMsg = 'CORS error: The remote server does not allow cross-origin downloads. '
-						+ 'The patch file URL must be hosted on a server that includes Access-Control-Allow-Origin headers. '
-						+ 'Original error: ' + err.message;
-				} else {
-					errorMsg = 'Error downloading remote patch file: ' + err.message;
-				}
-				RomPatcherWeb.getHtmlElements().setText('error-message', errorMsg);
+				.catch(function (err) {
+					console.error('Rom Patcher JS: Error fetching remote ' + fileType + ' file', err);
+					RomPatcherWeb.getHtmlElements().setSpinner(fileType, false);
+					RomPatcherWeb.getHtmlElements().addClass('row-error-message', 'show');
+					var errorMsg;
+					if (err instanceof TypeError && /failed to fetch/i.test(err.message)) {
+						errorMsg = 'CORS error: The remote server does not allow cross-origin downloads. '
+							+ 'The ' + fileType + ' file URL must be hosted on a server that includes Access-Control-Allow-Origin headers. '
+							+ 'Original error: ' + err.message;
+					} else {
+						errorMsg = 'Error downloading remote ' + fileType + ' file: ' + err.message;
+					}
+					RomPatcherWeb.getHtmlElements().setText('error-message', errorMsg);
+				});
+		};
+
+		const remotePatchFileUrl = urlParams.get('patchfile');
+		if (remotePatchFileUrl) {
+			_fetchRemoteFile(remotePatchFileUrl, 'patch', function (remoteFile, remoteFileName) {
+				RomPatcherWeb.providePatchFile(remoteFile);
+				RomPatcherWeb.getHtmlElements().setFakeFile('patch', remoteFileName);
+			});
+		}
+
+		const remoteRomFileUrl = urlParams.get('romfile');
+		if (remoteRomFileUrl) {
+			_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
+				RomPatcherWeb.provideRomFile(remoteFile);
+				RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
 			});
 		}
 	} catch (err) {
