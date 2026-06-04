@@ -131,6 +131,20 @@ window.addEventListener('load', function (evt) {
 
 		/* check for remote file URL parameters */
 		const urlParams = new URLSearchParams(window.location.search);
+		const remotePatchFileUrl = urlParams.get('patchfile');
+		const remoteRomFileUrl = urlParams.get('romfile');
+		const hasRemoteFiles = remotePatchFileUrl || remoteRomFileUrl;
+
+		if (hasRemoteFiles) {
+			var remoteFilesLoaded = { rom: !remoteRomFileUrl, patch: !remotePatchFileUrl };
+			var _onRemoteFileLoaded = function () {
+				if (remoteFilesLoaded.rom && remoteFilesLoaded.patch) {
+					/* both remote files loaded — ensure apply button state is correct */
+					RomPatcherWeb.getHtmlElements().enableAll();
+				}
+			};
+		}
+
 		const _fetchRemoteFile = function (fileUrl, fileType, onLoad) {
 			const remoteFileName = fileUrl.replace(/^.*[\/\\]/g, '').split('?')[0] || ('remote_' + fileType);
 			RomPatcherWeb.getHtmlElements().setSpinner(fileType, true);
@@ -144,6 +158,10 @@ window.addEventListener('load', function (evt) {
 					const remoteFile = new BinFile(arrayBuffer);
 					remoteFile.fileName = remoteFileName;
 					onLoad(remoteFile, remoteFileName);
+					if (hasRemoteFiles) {
+						remoteFilesLoaded[fileType] = true;
+						_onRemoteFileLoaded();
+					}
 				})
 				.catch(function (err) {
 					console.error('Rom Patcher JS: Error fetching remote ' + fileType + ' file', err);
@@ -161,7 +179,6 @@ window.addEventListener('load', function (evt) {
 				});
 		};
 
-		const remotePatchFileUrl = urlParams.get('patchfile');
 		if (remotePatchFileUrl) {
 			_fetchRemoteFile(remotePatchFileUrl, 'patch', function (remoteFile, remoteFileName) {
 				RomPatcherWeb.providePatchFile(remoteFile);
@@ -169,7 +186,6 @@ window.addEventListener('load', function (evt) {
 			});
 		}
 
-		const remoteRomFileUrl = urlParams.get('romfile');
 		if (remoteRomFileUrl) {
 			_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
 				RomPatcherWeb.provideRomFile(remoteFile);

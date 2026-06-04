@@ -244,8 +244,12 @@ const RomPatcherWeb = (function () {
 			if (settings.requireValidation && typeof applyButtonStatus !== 'undefined')
 				status = !!applyButtonStatus;
 			htmlElements.setEnabled('button-apply', status);
+			var dlBtn = document.getElementById('client-btn-download');
+			if (dlBtn) dlBtn.disabled = false;
 		} else {
 			htmlElements.setEnabled('button-apply', false);
+			var dlBtn = document.getElementById('client-btn-download');
+			if (dlBtn) dlBtn.disabled = true;
 		}
 	};
 

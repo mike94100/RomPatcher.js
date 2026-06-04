@@ -215,7 +215,10 @@ const ClientIntegration = (function () {
 
 		/* Update upload button label to show server name */
 		const uploadBtn = document.getElementById('client-btn-upload');
-		if (uploadBtn && client.name) uploadBtn.textContent = 'Upload to ' + client.name;
+		if (uploadBtn && client.name) {
+			uploadBtn.textContent = 'Upload to ' + client.name;
+			uploadBtn.style.display = '';
+		}
 
 		/* Apply patch and then run the action when patching completes */
 		const MAX_APPLY_RETRIES = 150; /* 30 seconds at 200ms intervals */
