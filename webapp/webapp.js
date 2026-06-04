@@ -45,8 +45,8 @@ const buildSettingsForWebapp = function () {
 		fixChecksum: settings.fixChecksum,
 		allowDropFiles: true,
 		ondropfiles:function(evt){
-			if(currentMode === 'creator'){
-				document.getElementById('switch-create-button').click();
+			if(currentTab === 'creator'){
+				/* already on creator tab, nothing to switch */
 			}
 		}
 	};
@@ -58,9 +58,19 @@ const saveSettings = function () {
 }
 
 
-var currentMode = 'patcher';
+var currentTab = 'patcher';
 
-
+/* Add tab bar styles */
+(function() {
+	var s = document.createElement('style');
+	s.textContent = [
+		'.tab-bar { display:flex; gap:0; margin-bottom:12px; border-bottom:2px solid #ddd; }',
+		'.tab-button { flex:1; padding:10px 16px; border:none; background:#f5f5f5; cursor:pointer; font-size:13px; font-weight:bold; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s; }',
+		'.tab-button:hover { background:#e8e8e8; }',
+		'.tab-button.active { background:#fff; color:#333; border-bottom-color:#4a90d9; }'
+	].join('\n');
+	document.head.appendChild(s);
+})();
 
 window.addEventListener('load', function (evt) {
 	/* set theme */
@@ -100,30 +110,146 @@ window.addEventListener('load', function (evt) {
 		document.body.className = 'theme-' + settings.theme;
 	});
 
-	document.getElementById('switch-create-button').addEventListener('click', function () {
-		if(!RomPatcherWeb.isInitialized())
-			throw new Error('Rom Patcher JS is not initialized yet');
-
-		if (/disabled/.test(document.getElementById('switch-create').className)) {
-			try{
-				if(!PatchBuilderWeb.isInitialized())
-					PatchBuilderWeb.initialize();
-			}catch(err){
+	/* Tab switching */
+	const containers = {
+		patcher: document.getElementById('rom-patcher-container'),
+		creator: document.getElementById('patch-builder-container'),
+		'url-builder': document.getElementById('url-builder-container')
+	};
+	const tabButtons = document.querySelectorAll('.tab-button');
+	const switchTab = function (tabId) {
+		currentTab = tabId;
+		tabButtons.forEach(function (btn) { btn.classList.remove('active'); });
+		document.querySelector('.tab-button[data-tab="' + tabId + '"]').classList.add('active');
+		for (var id in containers) {
+			if (containers[id]) containers[id].style.display = (id === tabId) ? 'block' : 'none';
+		}
+		if (tabId === 'creator' && !PatchBuilderWeb.isInitialized()) {
+			try { PatchBuilderWeb.initialize(); } catch (err) {
 				document.getElementById('patch-builder-container').innerHTML = err.message;
 				document.getElementById('patch-builder-container').style.color = 'red';
 			}
-
-			currentMode = 'creator';
-			document.getElementById('rom-patcher-container').style.display = 'none';
-			document.getElementById('patch-builder-container').style.display = 'block';
-			document.getElementById('switch-create').className = 'switch enabled';
-		} else {
-			currentMode = 'patcher';
-			document.getElementById('rom-patcher-container').style.display = 'block';
-			document.getElementById('patch-builder-container').style.display = 'none';
-			document.getElementById('switch-create').className = 'switch disabled';
 		}
+	};
+	tabButtons.forEach(function (btn) {
+		btn.addEventListener('click', function () { switchTab(this.dataset.tab); });
 	});
+
+	/* URL Builder */
+	(function () {
+		var elImport = document.getElementById('url-builder-import');
+		var elImportBtn = document.getElementById('url-builder-import-btn');
+		var elImportStatus = document.getElementById('url-builder-status-import');
+		var elPatchUrl = document.getElementById('url-builder-patchfile');
+		var elRomUrl = document.getElementById('url-builder-romfile');
+		var elRomHash = document.getElementById('url-builder-romhash');
+		var elOutput = document.getElementById('url-builder-output');
+		var elStatusPatch = document.getElementById('url-builder-status-patchfile');
+		var elStatusRom = document.getElementById('url-builder-status-romfile');
+		var elStatusHash = document.getElementById('url-builder-status-romhash');
+
+		if (!elOutput) return; /* URL Builder elements not found */
+
+		var _parseImportUrl = function () {
+			var url = elImport.value.trim();
+			if (!url) { elImportStatus.innerHTML = '<span style="color:orange">Enter a URL</span>'; return; }
+			try {
+				var parsed = new URL(url);
+				var params = parsed.searchParams;
+				var pf = params.get('patchfile');
+				var rf = params.get('romfile');
+				var rh = params.get('romhash');
+				if (pf) elPatchUrl.value = pf;
+				if (rf) elRomUrl.value = rf;
+				if (rh) elRomHash.value = rh;
+				if (pf || rf || rh) {
+					elImportStatus.innerHTML = '<span style="color:green">Parameters imported</span>';
+				} else {
+					elImportStatus.innerHTML = '<span style="color:orange">No known parameters found in URL</span>';
+				}
+				_validateHash();
+				_updateUrl();
+			} catch (e) {
+				elImportStatus.innerHTML = '<span style="color:red">Invalid URL</span>';
+			}
+		};
+
+		if (elImportBtn) {
+			elImportBtn.addEventListener('click', _parseImportUrl);
+		}
+		if (elImport) {
+			elImport.addEventListener('keydown', function (e) { if (e.key === 'Enter') _parseImportUrl(); });
+		}
+
+		var _testUrl = function (url, statusEl, btn) {
+			if (!url) { statusEl.innerHTML = ''; return; }
+			if (!/^https?:\/\//i.test(url)) { statusEl.innerHTML = '<span style="color:orange">Invalid URL</span>'; return; }
+			btn.disabled = true;
+			btn.textContent = 'Testing...';
+			var controller = new AbortController();
+			var timeout = setTimeout(function () { controller.abort(); }, 5000);
+			fetch(url, { method: 'HEAD', signal: controller.signal, mode: 'cors' })
+				.then(function (r) {
+					clearTimeout(timeout);
+					statusEl.innerHTML = '<span style="color:green">OK (' + r.status + ')</span>';
+				})
+				.catch(function (err) {
+					clearTimeout(timeout);
+					var msg = err.name === 'AbortError' ? 'Timeout' : (err.message.indexOf('Failed to fetch') !== -1 ? 'CORS/Network error' : err.message);
+					statusEl.innerHTML = '<span style="color:red">' + msg + '</span>';
+				})
+				.finally(function () { btn.disabled = false; btn.textContent = 'Test'; });
+		};
+
+		var _updateUrl = function () {
+			var base = window.location.origin + window.location.pathname;
+			var params = [];
+			var pf = elPatchUrl.value.trim();
+			var rf = elRomUrl.value.trim();
+			var rh = elRomHash.value.trim();
+			if (pf) params.push('patchfile=' + encodeURIComponent(pf));
+			if (rf) params.push('romfile=' + encodeURIComponent(rf));
+			if (rh) params.push('romhash=' + encodeURIComponent(rh));
+			if (params.length) elOutput.value = base + '?' + params.join('&');
+			else elOutput.value = base;
+		};
+
+		var _validateHash = function () {
+			var h = elRomHash.value.trim().toLowerCase().replace('0x', '');
+			if (!h) { elStatusHash.innerHTML = ''; return; }
+			if (/^[0-9a-f]{8}$/.test(h)) elStatusHash.innerHTML = '<span style="color:green">CRC32 hash</span>';
+			else if (/^[0-9a-f]{32}$/.test(h)) elStatusHash.innerHTML = '<span style="color:green">MD5 hash</span>';
+			else if (/^[0-9a-f]{40}$/.test(h)) elStatusHash.innerHTML = '<span style="color:green">SHA-1 hash</span>';
+			else elStatusHash.innerHTML = '<span style="color:red">Invalid: expected 8/32/40 hex chars</span>';
+		};
+
+		elPatchUrl.addEventListener('input', _updateUrl);
+		elRomUrl.addEventListener('input', _updateUrl);
+		elRomHash.addEventListener('input', function () { _validateHash(); _updateUrl(); });
+
+		document.getElementById('url-builder-test-patchfile').addEventListener('click', function () {
+			_testUrl(elPatchUrl.value.trim(), elStatusPatch, this);
+		});
+		document.getElementById('url-builder-test-romfile').addEventListener('click', function () {
+			_testUrl(elRomUrl.value.trim(), elStatusRom, this);
+		});
+
+		document.getElementById('url-builder-copy').addEventListener('click', function () {
+			if (!elOutput.value) return;
+			navigator.clipboard.writeText(elOutput.value).then(function () {
+				var origText = this.textContent;
+				this.textContent = 'Copied!';
+				var self = this;
+				setTimeout(function () { self.textContent = origText; }, 2000);
+			}.bind(this)).catch(function () {
+				/* fallback */
+				elOutput.select();
+				document.execCommand('copy');
+			});
+		});
+
+		_updateUrl();
+	})();
 
 	try {
 		const initialSettings = buildSettingsForWebapp();

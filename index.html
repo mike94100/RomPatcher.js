@@ -54,7 +54,11 @@
 
 <!-- APP -->
 <div id="wrapper">
-	<div id="switch-container"><span id="switch-create-button" class="btn-transparent"><span data-localize="yes">Creator mode</span> <span id="switch-create" class="switch disabled"></span></span></div>
+	<div id="tab-bar" class="tab-bar">
+		<button id="tab-patcher" class="tab-button active" data-tab="patcher">Patch</button>
+		<button id="tab-creator" class="tab-button" data-tab="creator">Creator</button>
+		<button id="tab-url-builder" class="tab-button" data-tab="url-builder">URL Builder</button>
+	</div>
 
 	<div class="tab">
 		<div id="rom-patcher-container">
@@ -188,6 +192,57 @@
 			<div class="buttons text-center">
 				<div id="patch-builder-row-error-message" class="m-b"><span id="patch-builder-error-message"></span></div>
 				<button id="patch-builder-button-create" disabled data-localize="yes" disabled>Create patch</button>
+			</div>
+		</div>
+
+		<div id="url-builder-container" style="display:none">
+			<div class="row m-b">
+				<div class="text-right"><label>Import URL:</label></div>
+				<div class="rom-patcher-container-input">
+					<input type="url" id="url-builder-import" placeholder="Paste a RomPatcher.js URL to parse its parameters" style="width:100%;box-sizing:border-box;padding:6px" />
+					<div style="margin-top:4px">
+						<button id="url-builder-import-btn" class="rom-patcher-btn-small">Import</button>
+						<span id="url-builder-status-import" class="text-muted" style="font-size:11px;margin-left:6px"></span>
+					</div>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div class="text-right"><label>Patch file URL:</label></div>
+				<div class="rom-patcher-container-input">
+					<input type="url" id="url-builder-patchfile" placeholder="https://example.com/patch.ips" style="width:100%;box-sizing:border-box;padding:6px" />
+					<div style="margin-top:4px">
+						<button id="url-builder-test-patchfile" class="rom-patcher-btn-small">Test</button>
+						<span id="url-builder-status-patchfile" class="text-muted" style="font-size:11px;margin-left:6px"></span>
+					</div>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div class="text-right"><label>ROM file URL:</label></div>
+				<div class="rom-patcher-container-input">
+					<input type="url" id="url-builder-romfile" placeholder="https://example.com/rom.sfc" style="width:100%;box-sizing:border-box;padding:6px" />
+					<div style="margin-top:4px">
+						<button id="url-builder-test-romfile" class="rom-patcher-btn-small">Test</button>
+						<span id="url-builder-status-romfile" class="text-muted" style="font-size:11px;margin-left:6px"></span>
+					</div>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div class="text-right"><label>ROM hash:</label></div>
+				<div class="rom-patcher-container-input">
+					<input type="text" id="url-builder-romhash" placeholder="CRC32 (8 hex), MD5 (32 hex) or SHA-1 (40 hex)" style="width:100%;box-sizing:border-box;padding:6px" />
+					<div style="margin-top:4px">
+						<span id="url-builder-status-romhash" class="text-muted" style="font-size:11px"></span>
+					</div>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div></div>
+				<div>
+					<input type="text" id="url-builder-output" readonly style="width:100%;box-sizing:border-box;padding:6px;background:#f0f0f0;font-family:monospace;font-size:12px" />
+					<div style="margin-top:4px">
+						<button id="url-builder-copy" class="rom-patcher-btn-small">Copy URL</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
