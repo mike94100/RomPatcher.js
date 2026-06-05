@@ -124,17 +124,29 @@ const saveSettings = function () {
 
 var currentTab = 'patcher';
 
-/* Add tab bar styles */
-(function() {
-	var s = document.createElement('style');
-	s.textContent = [
-		'.tab-bar { display:flex; gap:0; margin-bottom:12px; border-bottom:2px solid #ddd; }',
-		'.tab-button { flex:1; padding:10px 16px; border:none; background:#f5f5f5; cursor:pointer; font-size:13px; font-weight:bold; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s; }',
-		'.tab-button:hover { background:#e8e8e8; }',
-		'.tab-button.active { background:#fff; color:#333; border-bottom-color:#4a90d9; }'
-	].join('\n');
-	document.head.appendChild(s);
-})();
+	/* Add tab bar styles */
+	(function() {
+		var s = document.createElement('style');
+		s.textContent = [
+			'.tab-bar {',
+			'  display:flex; flex-wrap:wrap; margin-bottom:12px;',
+			'  border-bottom:2px solid #ddd;',
+			'  position:relative;',
+			'}',
+			'.tab-button {',
+			'  flex:1 1 auto; padding:12px 20px; border:none;',
+			'  cursor:pointer; font-size:13px; font-weight:bold; color:#666;',
+			'  background:#e8e8e8; transition:all 0.2s;',
+			'  white-space:nowrap; min-height:44px;',
+			'  border-right:1px solid #ddd;',
+			'}',
+			'.tab-button:last-child { border-right:none; }',
+			'.tab-button:hover { background:#ddd; }',
+			'.tab-button:active { background:#ccc; }',
+			'.tab-button.active { background:var(--rom-patcher-color-primary,#4a90d9); color:#fff; }'
+		].join('\n');
+		document.head.appendChild(s);
+	})();
 
 window.addEventListener('load', function (evt) {
 	/* set theme */

@@ -34,3 +34,6 @@ ROMs are cached when provided so you do not need to redownload (from configured 
 
 ## Examples
 [Pokemon Sienna ips patch - Base FireRed Rev 0 - sets patchfile, romhash, outputname](https://mike94100.github.io/RomPatcher.js/?patchfile=https%3A%2F%2Fraw.githubusercontent.com%2Fmike94100%2Frompatcher-rs%2Frefs%2Fheads%2Fmain%2Fpatches%2FPokemon_Sienna_(Complete)_(FireRed).ips&romhash=41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc&outputname=Pokemon%20Sienna%20(Rev%206)%20(Hack))
+
+## AI
+Yes this is vibe-coded and I have minimal experience with JS. I wanted to put together features that I thought would be beneficial for a general-purpose ROM patcher. If you do not want to use it, understood. If you want to improve it, please do.

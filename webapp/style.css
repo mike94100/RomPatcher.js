@@ -698,3 +698,11 @@ body.theme-pastel .spinner:before{background-color:#ff941e}
 	header img{max-height:96px}
 	#dialog-settings, #rom-patcher-dialog-zip{min-width: auto;}
 }
+
+/* tab button base styles (fallback before JS loads) */
+.tab-button{
+	flex:1 1 auto;
+	padding:12px 20px;
+	margin:1px 1px;
+	min-height:44px;
+}
