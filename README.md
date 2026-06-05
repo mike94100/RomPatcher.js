@@ -29,5 +29,8 @@ Server integrations allow for reading and writing data to self-hosted ROM manage
 https://mike94100.github.io/RomPatcher.js/?patchfile=<URL>&romfile=<URL>&romhash=<CRC32/MD5/SHA1>&outputname=<STRING>
 ```
 
+## Cache
+ROMs are cached when provided so you do not need to redownload (from configured server or romfile parameter) or reupload manually. You may manually select a file from the cache to use, or delete files from the cache.
+
 ## Examples
 [Pokemon Sienna ips patch - Base FireRed Rev 0 - sets patchfile, romhash, outputname](https://mike94100.github.io/RomPatcher.js/?patchfile=https%3A%2F%2Fraw.githubusercontent.com%2Fmike94100%2Frompatcher-rs%2Frefs%2Fheads%2Fmain%2Fpatches%2FPokemon_Sienna_(Complete)_(FireRed).ips&romhash=41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc&outputname=Pokemon%20Sienna%20(Rev%206)%20(Hack))

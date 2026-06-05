@@ -16,7 +16,8 @@ const settings = {
 	language: typeof navigator.userLanguage === 'string' ? navigator.userLanguage.substr(0, 2) : 'en',
 	outputSuffix: true,
 	fixChecksum: false,
-	theme: 'default'
+	theme: 'default',
+	cacheRoms: true
 };
 /* load settings from localStorage */
 if (typeof localStorage !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_SETTINGS_ID)) {
@@ -34,6 +35,9 @@ if (typeof localStorage !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_SE
 
 		if (typeof loadedSettings.theme === 'string' && ['light'].indexOf(loadedSettings.theme) !== -1)
 			settings.theme = loadedSettings.theme;
+
+		if (typeof loadedSettings.cacheRoms === 'boolean')
+			settings.cacheRoms = loadedSettings.cacheRoms;
 	} catch (err) {
 		console.error('Error while loading settings: ' + err.message);
 	}
@@ -67,6 +71,16 @@ const buildSettingsForWebapp = function () {
 		   available regardless of whether an extension is loaded. If a server
 		   extension also registers a callback, it will overwrite ours — but its
 		   callback does the same reveal work, so behaviour stays correct. */
+		onloadrom: function (romFile) {
+			/* Auto-cache the ROM once hashes are computed (CRC32, MD5 available immediately, SHA-1 async). */
+			if (settings.cacheRoms && typeof RomCache !== 'undefined' && romFile) {
+				RomCache.put(romFile, romFile.fileName).then(function (entry) {
+					if (entry) console.log('RomCache: cached', entry.name, entry.sha1.substring(0, 12));
+				}).catch(function (e) {
+					console.warn('RomCache: failed to cache ROM:', e.message);
+				});
+			}
+		},
 		onvalidaterom: function (romFile, validRom) {
 			if (!validRom) return;
 			var outputSection = document.getElementById('client-output-section');
@@ -160,10 +174,17 @@ window.addEventListener('load', function (evt) {
 		document.body.className = 'theme-' + settings.theme;
 	});
 
+	document.getElementById('settings-cache-roms').checked = settings.cacheRoms;
+	document.getElementById('settings-cache-roms').addEventListener('change', function () {
+		settings.cacheRoms = this.checked;
+		saveSettings();
+	});
+
 	/* Tab switching */
 	const containers = {
 		patcher: document.getElementById('rom-patcher-container'),
 		creator: document.getElementById('patch-builder-container'),
+		cache: document.getElementById('cache-container'),
 		'url-builder': document.getElementById('url-builder-container')
 	};
 	const tabButtons = document.querySelectorAll('.tab-button');
@@ -180,6 +201,7 @@ window.addEventListener('load', function (evt) {
 				document.getElementById('patch-builder-container').style.color = 'red';
 			}
 		}
+		if (tabId === 'cache') { _refreshCacheList(); }
 	};
 	tabButtons.forEach(function (btn) {
 		btn.addEventListener('click', function () { switchTab(this.dataset.tab); });
@@ -307,6 +329,184 @@ window.addEventListener('load', function (evt) {
 		_updateUrl();
 	})();
 
+	/* ---- Base ROM Cache ---- */
+	var _showCacheToast = function (msg) {
+		var existing = document.getElementById('rom-cache-toast');
+		if (existing) existing.remove();
+		var toast = document.createElement('div');
+		toast.id = 'rom-cache-toast';
+		toast.textContent = msg;
+		toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:6px;font-size:13px;z-index:9999;transition:opacity 0.4s;opacity:1;';
+		document.body.appendChild(toast);
+		setTimeout(function () { toast.style.opacity = '0'; }, 3000);
+		setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3500);
+	};
+
+	var _formatBytes = function (n) {
+		if (n < 1024) return n + 'B';
+		if (n < 1024 * 1024) return (n / 1024).toFixed(1) + 'KB';
+		if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + 'MB';
+		return (n / (1024 * 1024 * 1024)).toFixed(1) + 'GB';
+	};
+
+	var _formatDate = function (ts) {
+		if (!ts) return 'Never';
+		var d = new Date(ts);
+		return d.toLocaleDateString();
+	};
+
+	var _refreshCacheList = function () {
+		if (typeof RomCache === 'undefined') return;
+		var listEl = document.getElementById('cache-list');
+		var emptyEl = document.getElementById('cache-empty');
+		var sizeEl = document.getElementById('cache-total-size');
+		var storageEl = document.getElementById('cache-storage-usage');
+		if (!listEl) return;
+
+		RomCache.list().then(function (entries) {
+			listEl.innerHTML = '';
+			if (!entries || !entries.length) {
+				if (emptyEl) emptyEl.style.display = '';
+				if (sizeEl) sizeEl.textContent = 'ROMs cached: 0';
+				if (storageEl) storageEl.textContent = '';
+				listEl.style.display = 'none';
+				return;
+			}
+			if (emptyEl) emptyEl.style.display = 'none';
+			listEl.style.display = '';
+			var totalZip = 0;
+			entries.forEach(function (e) { totalZip += e.storedSize || 0; });
+			if (sizeEl) sizeEl.textContent = 'ROMs cached: ' + entries.length;
+			if (storageEl) storageEl.textContent = 'Storage: ' + _formatBytes(totalZip);
+
+			entries.forEach(function (e) {
+				var row = document.createElement('div');
+				row.style.borderBottom = '1px solid #eee';
+				row.style.padding = '6px 0';
+
+				/* Top line: name (full width), expand arrow (hover only) */
+				var top = document.createElement('div');
+				top.style.display = 'flex';
+				top.style.alignItems = 'center';
+
+				var nameSpan = document.createElement('span');
+				nameSpan.style.flex = '1';
+				nameSpan.style.overflow = 'hidden';
+				nameSpan.style.textOverflow = 'ellipsis';
+				nameSpan.style.whiteSpace = 'nowrap';
+				nameSpan.style.fontSize = '13px';
+				nameSpan.style.fontWeight = '500';
+				nameSpan.textContent = e.name;
+				nameSpan.title = e.name;
+
+				var expandBtn = document.createElement('span');
+				expandBtn.textContent = ' ▸';
+				expandBtn.style.cursor = 'pointer';
+				expandBtn.style.fontSize = '12px';
+				expandBtn.style.color = '#000';
+				expandBtn.style.display = 'none';
+				expandBtn.style.whiteSpace = 'nowrap';
+				expandBtn.style.flexShrink = '0';
+
+				top.appendChild(nameSpan);
+				top.appendChild(expandBtn);
+
+				/* Expandable detail section */
+				var detail = document.createElement('div');
+				detail.style.display = 'none';
+				detail.style.padding = '4px 0 0 0';
+				detail.style.fontSize = '12px';
+				detail.style.color = '#666';
+				detail.style.lineHeight = '1.8';
+				detail.style.fontFamily = 'monospace';
+
+				var infoLines = document.createElement('div');
+				infoLines.style.marginBottom = '6px';
+				var il = [
+					'Size: ' + _formatBytes(e.storedSize),
+					'Last used: ' + _formatDate(e.lastUsed)
+				];
+				if (e.sha1) il.push('SHA-1: ' + e.sha1);
+				if (e.md5) il.push('MD5: ' + e.md5);
+				if (e.crc32) il.push('CRC32: ' + e.crc32);
+				infoLines.innerHTML = il.join('<br>');
+				detail.appendChild(infoLines);
+
+				/* Buttons inside expandable section */
+				var btnRow = document.createElement('div');
+				btnRow.style.display = 'flex';
+				btnRow.style.gap = '6px';
+
+				var useBtn = document.createElement('button');
+				useBtn.className = 'rom-patcher-btn-small';
+				useBtn.textContent = 'Use';
+				useBtn.addEventListener('click', function () {
+					RomCache.findByHash({ type: 'SHA-1', value: e.sha1 }).then(function (entry) {
+						if (!entry) return;
+						return RomCache.toBlob(entry).then(function (blob) {
+							return blob.arrayBuffer();
+						}).then(function (ab) {
+							var binFile = new BinFile(ab);
+							binFile.fileName = e.name;
+							RomPatcherWeb.provideRomFile(binFile);
+							RomPatcherWeb.getHtmlElements().setFakeFile('rom', e.name);
+							_showCacheToast('Loaded from cache: ' + e.name);
+							switchTab('patcher');
+						});
+					});
+				});
+				btnRow.appendChild(useBtn);
+
+				var delBtn = document.createElement('button');
+				delBtn.className = 'rom-patcher-btn-small';
+				delBtn.textContent = 'Delete';
+				delBtn.style.color = '#ff0030';
+				delBtn.addEventListener('click', function () {
+					RomCache.remove(e.sha1).then(function () { _refreshCacheList(); });
+				});
+				btnRow.appendChild(delBtn);
+				detail.appendChild(btnRow);
+
+				row.appendChild(top);
+				row.appendChild(detail);
+
+				var expanded = false;
+				function toggleExpand() {
+					expanded = !expanded;
+					expandBtn.textContent = expanded ? ' ▾' : ' ▸';
+					detail.style.display = expanded ? 'block' : 'none';
+				}
+
+				expandBtn.addEventListener('click', function (ev) {
+					ev.stopPropagation();
+					toggleExpand();
+				});
+
+				/* Desktop: show expand arrow on hover */
+				row.addEventListener('mouseenter', function () {
+					expandBtn.style.display = '';
+				});
+				row.addEventListener('mouseleave', function () {
+					expandBtn.style.display = 'none';
+				});
+
+				/* Mobile: tap name to expand */
+				nameSpan.addEventListener('click', function (ev) {
+					ev.stopPropagation();
+					toggleExpand();
+				});
+
+				listEl.appendChild(row);
+			});
+		});
+	};
+
+	var _cacheClearBtn = document.getElementById('cache-clear-all');
+	if (_cacheClearBtn) _cacheClearBtn.addEventListener('click', function () {
+		if (!confirm('Delete all cached ROMs?')) return;
+		RomCache.clear().then(function () { _refreshCacheList(); });
+	});
+
 	try {
 		const initialSettings = buildSettingsForWebapp();
 
@@ -361,6 +561,13 @@ window.addEventListener('load', function (evt) {
 
 		RomPatcherWeb.initialize(initialSettings);
 
+		/* Initialize the base ROM cache */
+		if (typeof RomCache !== 'undefined') {
+			RomCache.open().catch(function (e) {
+				console.warn('RomCache: failed to open IndexedDB:', e.message);
+			});
+		}
+
 		if (hasRemoteFiles) {
 			var remoteFilesLoaded = { rom: !remoteRomFileUrl, patch: !remotePatchFileUrl };
 			var _onRemoteFileLoaded = function () {
@@ -412,11 +619,50 @@ window.addEventListener('load', function (evt) {
 			});
 		}
 
+		/* Load ROM: Cache → ?romfile= URL → manual. The order is:
+		   1. Check local cache by ?romhash=
+		   2. Fetch ?romfile= URL (fallback)
+		   If no romhash is given but romfile is, just fetch from URL. */
+		var _romLoadedFromCache = false;
 		if (remoteRomFileUrl) {
-			_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
-				RomPatcherWeb.provideRomFile(remoteFile);
-				RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
-			});
+			if (_parsedRomHash && settings.cacheRoms && typeof RomCache !== 'undefined') {
+				RomCache.findByHash(_parsedRomHash).then(function (cached) {
+					if (cached) {
+						return RomCache.toBlob(cached).then(function (blob) {
+							return blob.arrayBuffer();
+						}).then(function (ab) {
+							var binFile = new BinFile(ab);
+							binFile.fileName = cached.name;
+							RomPatcherWeb.provideRomFile(binFile);
+							RomPatcherWeb.getHtmlElements().setFakeFile('rom', cached.name);
+							_showCacheToast('Loaded from cache: ' + cached.name);
+							_romLoadedFromCache = true;
+							if (hasRemoteFiles) {
+								remoteFilesLoaded.rom = true;
+								_onRemoteFileLoaded();
+							}
+						});
+					}
+					/* Cache miss — fall through to URL fetch */
+					if (!_romLoadedFromCache) {
+						_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
+							RomPatcherWeb.provideRomFile(remoteFile);
+							RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+						});
+					}
+				}).catch(function () {
+					/* Cache lookup failed — fall through to URL fetch */
+					_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
+						RomPatcherWeb.provideRomFile(remoteFile);
+						RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+					});
+				});
+			} else {
+				_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
+					RomPatcherWeb.provideRomFile(remoteFile);
+					RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+				});
+			}
 		}
 
 		/* ---- Standalone Download button (no server extension required) ----
