@@ -334,6 +334,11 @@ const ClientIntegration = (function () {
 						const searchArea = document.getElementById('client-search-area');
 							if (searchArea && client.isConfigured()) {
 								searchArea.style.display = '';
+								/* Skip server auto-lookup if the ROM was already loaded from local cache */
+								if (RomPatcherWeb._romCacheLoaded) {
+									console.log('[ClientIntegration] ROM loaded from cache, skipping server auto-lookup');
+									return;
+								}
 								if (_cachedHashes && typeof romSourceHooks.onAutoLookup === 'function') {
 									const searchInput = document.getElementById('client-search-value');
 									const toggleBtn = document.getElementById('client-search-toggle');

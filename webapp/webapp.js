@@ -342,7 +342,7 @@ window.addEventListener('load', function (evt) {
 	})();
 
 	/* ---- Base ROM Cache ---- */
-	var _showCacheToast = function (msg) {
+	var _showAutoLoadToast = function (msg) {
 		var existing = document.getElementById('rom-cache-toast');
 		if (existing) existing.remove();
 		var toast = document.createElement('div');
@@ -353,6 +353,8 @@ window.addEventListener('load', function (evt) {
 		setTimeout(function () { toast.style.opacity = '0'; }, 3000);
 		setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3500);
 	};
+	/* Expose globally for extensions (RomM, etc.) */
+	RomPatcherWeb.showAutoLoadToast = _showAutoLoadToast;
 
 	var _formatBytes = function (n) {
 		if (n < 1024) return n + 'B';
@@ -462,7 +464,7 @@ window.addEventListener('load', function (evt) {
 							binFile.fileName = e.name;
 							RomPatcherWeb.provideRomFile(binFile);
 							RomPatcherWeb.getHtmlElements().setFakeFile('rom', e.name);
-							_showCacheToast('Loaded from cache: ' + e.name);
+							_showAutoLoadToast('Loaded from cache: ' + e.name);
 							switchTab('patcher');
 						});
 					});
@@ -631,50 +633,55 @@ window.addEventListener('load', function (evt) {
 			});
 		}
 
-		/* Load ROM: Cache → ?romfile= URL → manual. The order is:
-		   1. Check local cache by ?romhash=
-		   2. Fetch ?romfile= URL (fallback)
-		   If no romhash is given but romfile is, just fetch from URL. */
-		var _romLoadedFromCache = false;
-		if (remoteRomFileUrl) {
-			if (_parsedRomHash && settings.cacheRoms && typeof RomCache !== 'undefined') {
-				RomCache.findByHash(_parsedRomHash).then(function (cached) {
-					if (cached) {
-						return RomCache.toBlob(cached).then(function (blob) {
-							return blob.arrayBuffer();
-						}).then(function (ab) {
-							var binFile = new BinFile(ab);
-							binFile.fileName = cached.name;
-							RomPatcherWeb.provideRomFile(binFile);
-							RomPatcherWeb.getHtmlElements().setFakeFile('rom', cached.name);
-							_showCacheToast('Loaded from cache: ' + cached.name);
-							_romLoadedFromCache = true;
-							if (hasRemoteFiles) {
-								remoteFilesLoaded.rom = true;
-								_onRemoteFileLoaded();
-							}
-						});
-					}
-					/* Cache miss — fall through to URL fetch */
-					if (!_romLoadedFromCache) {
-						_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
-							RomPatcherWeb.provideRomFile(remoteFile);
-							RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
-						});
-					}
-				}).catch(function () {
-					/* Cache lookup failed — fall through to URL fetch */
+		/* Load ROM: Cache → Server (RomM) → ?romfile= URL → manual upload.
+		   The order is enforced globally:
+		   1. Check local cache by ?romhash= (runs immediately, independent of URL)
+		   2. RomM auto-lookup (integration.js onloadpatch) — suppressed if cache hit
+		   3. Fetch ?romfile= URL (fallback)
+		   4. User uploads manually */
+		RomPatcherWeb._romCacheLoaded = false;
+		if (_parsedRomHash && settings.cacheRoms && typeof RomCache !== 'undefined') {
+			RomCache.findByHash(_parsedRomHash).then(function (cached) {
+				if (cached) {
+					return RomCache.toBlob(cached).then(function (blob) {
+						return blob.arrayBuffer();
+					}).then(function (ab) {
+						var binFile = new BinFile(ab);
+						binFile.fileName = cached.name;
+						RomPatcherWeb.provideRomFile(binFile);
+						RomPatcherWeb.getHtmlElements().setFakeFile('rom', cached.name);
+						_showAutoLoadToast('Loaded from cache: ' + cached.name);
+						RomPatcherWeb._romCacheLoaded = true;
+						if (hasRemoteFiles && remoteRomFileUrl) {
+							remoteFilesLoaded.rom = true;
+							_onRemoteFileLoaded();
+						}
+					});
+				}
+				/* Cache miss — fall through to server auto-lookup or URL fetch */
+				if (!RomPatcherWeb._romCacheLoaded && remoteRomFileUrl) {
 					_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
 						RomPatcherWeb.provideRomFile(remoteFile);
 						RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+						_showAutoLoadToast('Loaded from URL: ' + remoteFileName);
 					});
-				});
-			} else {
-				_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
-					RomPatcherWeb.provideRomFile(remoteFile);
-					RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
-				});
-			}
+				}
+			}).catch(function () {
+				/* Cache lookup failed — fall through to URL fetch */
+				if (remoteRomFileUrl) {
+					_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
+						RomPatcherWeb.provideRomFile(remoteFile);
+						RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+						_showAutoLoadToast('Loaded from URL: ' + remoteFileName);
+					});
+				}
+			});
+		} else if (remoteRomFileUrl) {
+			_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
+				RomPatcherWeb.provideRomFile(remoteFile);
+				RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
+				_showAutoLoadToast('Loaded from URL: ' + remoteFileName);
+			});
 		}
 
 		/* ---- Standalone Download button (no server extension required) ----

@@ -42,6 +42,9 @@
 
 				if (typeof RomPatcherWeb !== 'undefined' && RomPatcherWeb.provideRomFile) {
 					RomPatcherWeb.provideRomFile(binFile, true);
+					if (typeof RomPatcherWeb.showAutoLoadToast === 'function') {
+						RomPatcherWeb.showAutoLoadToast('Loaded from RomM: ' + fileName);
+					}
 				}
 			} catch (e) {
 				console.error('[ClientIntegration:romm] Failed to download ROM: ' + e.message);
