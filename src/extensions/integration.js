@@ -201,8 +201,8 @@ const ClientIntegration = (function () {
 			var canvas = document.getElementById('settings-client-qr-canvas'); var container = document.getElementById('settings-client-qr-container');
 			if (canvas && container) { try { QR.generate(canvas, json, 256); container.style.display = ''; } catch (e) { _showStatus('QR generation failed: ' + e.message, true); } }
 		});
-		const dialog = document.getElementById('dialog-settings');
-		if (dialog) { dialog.addEventListener('close', function () { var qc = document.getElementById('settings-client-qr-container'); if (qc) qc.style.display = 'none'; }); }
+		/* Note: QR container visibility is now controlled by user clicks on the QR button,
+		   since settings are in a tab rather than a dialog */
 	};
 
 	/* Register a client with hooks */
@@ -220,12 +220,6 @@ const ClientIntegration = (function () {
 		const settingsJsUiExists = document.getElementById('extensions-settings-section');
 		if (settingsContainer && !settingsJsUiExists) {
 			_renderClientSettings(clientId);
-			var settingsBtn = document.getElementById('button-settings');
-			if (settingsBtn) {
-				settingsBtn.addEventListener('click', function () {
-					if (Array.isArray(client.settingsFields)) { client.settingsFields.forEach(function (f) { var inp = document.getElementById('settings-client-field-' + f.id); if (inp && typeof client['_' + f.id] !== 'undefined') inp.value = client['_' + f.id] || ''; }); }
-				});
-			}
 		}
 
 		/* Update upload button label to show server name */

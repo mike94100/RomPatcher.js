@@ -163,8 +163,6 @@ hr{border:none;border-top:1px dotted #bbb;margin:15px 0}
 	background-color:#babfbf;
 }
 #switch-create-button .switch.disabled{background-color:var(--rom-patcher-color-switch-background);}
-#dialog-settings>.rom-patcher-dialog .switch{transition:opacity .1s;}
-#dialog-settings>.rom-patcher-dialog .switch:hover{cursor:pointer;opacity:.7}
 .switch:before{
 	position:absolute;
 	background-color:var(--rom-patcher-color-switch);
@@ -557,22 +555,9 @@ button:disabled{opacity:.35 !important;cursor:not-allowed}
 */
 }
 
-/* settings dialog */
-#dialog-settings{
-	min-width:400px;
-	max-width:90%;
-}
-#dialog-settings-button-close{
-	padding:8px;
-	border-radius:30px;
-	margin-right:-8px;
-	margin-top:-8px;
-	transition:background-color .2s;
-	height:24px;
-}
-#dialog-settings-button-close:hover{
-	cursor:pointer;
-	background-color:#f4f4f4;
+/* settings container */
+#settings-container{
+	padding:16px;
 }
 input[type=checkbox].styled{
 	-moz-appearance:none;
@@ -696,7 +681,7 @@ body.theme-pastel .spinner:before{background-color:#ff941e}
 	#wrapper{font-size:14px}
 	#rom-patcher-rom-info{font-size:11px}
 	header img{max-height:96px}
-	#dialog-settings, #rom-patcher-dialog-zip{min-width: auto;}
+	#rom-patcher-dialog-zip{min-width: auto;}
 }
 
 /* tab button base styles (fallback before JS loads) */

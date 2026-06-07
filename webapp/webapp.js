@@ -179,14 +179,6 @@ window.addEventListener('load', function (evt) {
 	/* set theme */
 	document.body.className = 'theme-' + settings.theme;
 
-	/* event listeners */
-	document.getElementById('button-settings').addEventListener('click', function (evt) {
-		document.getElementById('dialog-settings').showModal();
-	});
-	document.getElementById('dialog-settings-button-close').addEventListener('click', function (evt) {
-		document.getElementById('dialog-settings').close();
-	});
-
 	document.getElementById('settings-language').value = settings.language;
 	document.getElementById('settings-language').addEventListener('change', function () {
 		settings.language = this.value;
@@ -224,7 +216,8 @@ window.addEventListener('load', function (evt) {
 		patcher: document.getElementById('rom-patcher-container'),
 		creator: document.getElementById('patch-builder-container'),
 		cache: document.getElementById('cache-container'),
-		'url-builder': document.getElementById('url-builder-container')
+		'url-builder': document.getElementById('url-builder-container'),
+		settings: document.getElementById('settings-container')
 	};
 	const tabButtons = document.querySelectorAll('.tab-button');
 	const switchTab = function (tabId) {

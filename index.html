@@ -54,7 +54,7 @@
 
 
 <!-- HEADER -->
-<header><img src="./webapp/logo.png" loading="lazy" /><h1>Rom Patcher JS</h1></header>
+<header><h1>Rom Patcher JS+</h1></header>
 
 <!-- APP -->
 <div id="wrapper">
@@ -63,6 +63,7 @@
 		<button id="tab-creator" class="tab-button" data-tab="creator">Creator</button>
 		<button id="tab-cache" class="tab-button" data-tab="cache">Cache</button>
 		<button id="tab-url-builder" class="tab-button" data-tab="url-builder">URL Builder</button>
+		<button id="tab-settings" class="tab-button" data-tab="settings">Settings</button>
 	</div>
 
 	<div class="tab">
@@ -272,79 +273,69 @@
 			</div>
 			<div id="cache-list" style="display:none"></div>
 		</div>
+
+		<div id="settings-container" style="display:none">
+			<div class="row m-b">
+				<div><label for="settings-language">Language</label></div>
+				<div class="text-right">
+					<select id="settings-language" class="enabled">
+						<option value="en">English</option>
+						<option value="fr">Français</option>
+						<option value="de">Deutsch</option>
+						<option value="it">Italiano</option>
+						<option value="es">Español</option>
+						<option value="nl">Nederlands</option>
+						<option value="sv">Svenska</option>
+						<option value="ca">Català</option>
+						<option value="ca-va">Valencià</option>
+						<option value="pt-br">Português Brasileiro</option>
+						<option value="ru">Russian</option>
+						<option value="ja">日本語</option>
+						<option value="zh-cn">中文（简体）</option>
+						<option value="zh-tw">中文（正體）</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="row row-lg m-b">
+				<div><label data-localize="yes" for="settings-output-suffix">Use patch name for output</label></div>
+				<div class="text-right"><input type="checkbox" id="settings-output-suffix" class="styled" /></div>
+			</div>
+
+			<div class="row row-lg m-b">
+				<div><label data-localize="yes" for="settings-fix-checksum">Fix ROM checksum</label></div>
+				<div class="text-right"><input type="checkbox" id="settings-fix-checksum" class="styled" /></div>
+			</div>
+
+			<div class="row row-lg">
+				<div><label data-localize="yes" for="settings-light-theme">Light theme</label></div>
+				<div class="text-right"><input type="checkbox" id="settings-light-theme" class="styled" /></div>
+			</div>
+
+			<div class="row row-lg m-b">
+				<div><label data-localize="yes" for="settings-cache-roms">Cache base ROMs locally</label></div>
+				<div class="text-right"><input type="checkbox" id="settings-cache-roms" class="styled" checked /></div>
+			</div>
+
+			<hr style="border:none;border-top:1px solid #ddd;margin:16px 0" />
+
+			<!-- Client settings container (dynamically populated by romm-settings.js or client-integration.js) -->
+			<div id="client-settings-container"></div>
+		</div>
 	</div>
 </div>
 
-
-
-
-
 <!-- FOOTER -->
 <footer>
-	<div>
-		<button id="button-settings" class="btn-transparent"><img src="./webapp/icon_settings.svg" loading="lazy" class="icon settings" /> <span data-localize="yes">Settings</span></button>
-	</div>
-
-	Rom Patcher JS <small><a href="legacy/" rel="nofollow">v3.2.2</a></small> by <a href="/">Marc Robledo</a>
+	RomPatcherJS+ by mike94100
 	<br />
-	<img src="./webapp/icon_github.svg" loading="lazy" class="icon github" /> <a href="https://github.com/marcrobledo/RomPatcher.js/" target="_blank">See on GitHub</a>
+	<img src="./webapp/icon_github.svg" loading="lazy" class="icon github" /> <a href="https://github.com/mike94100/RomPatcher.js" target="_blank">GitHub</a>
+	<br />
+	Powered by Rom Patcher JS v3.2.2 by Marc Robledo
+	<br />
+	<img src="./webapp/icon_github.svg" loading="lazy" class="icon github" /> <a href="https://github.com/marcrobledo/RomPatcher.js/" target="_blank">GitHub</a>
 	<img src="./webapp/icon_heart.svg" loading="lazy" class="icon heart" /> <a href="https://www.paypal.me/marcrobledo/5" target="_blank" rel="nofollow">Donate</a>
 </footer>
-
-
-
-
-<!-- SETTINGS DIALOG -->
-<dialog id="dialog-settings" class="rom-patcher-dialog">
-	<div class="text-right m-b"><img id="dialog-settings-button-close" src="./webapp/icon_close.svg" loading="lazy" /></div>
-
-	<div class="row m-b">
-		<div><label for="settings-language">Language</label></div>
-		<div class="text-right">
-			<select id="settings-language" class="enabled">
-				<option value="en">English</option>
-				<option value="fr">Français</option>
-				<option value="de">Deutsch</option>
-				<option value="it">Italiano</option>
-				<option value="es">Español</option>
-				<option value="nl">Nederlands</option>
-				<option value="sv">Svenska</option>
-				<option value="ca">Català</option>
-				<option value="ca-va">Valencià</option>
-				<option value="pt-br">Português Brasileiro</option>
-				<option value="ru">Russian</option>
-				<option value="ja">日本語</option>
-				<option value="zh-cn">中文（简体）</option>
-				<option value="zh-tw">中文（正體）</option>
-			</select>
-		</div>
-	</div>
-
-	<div class="row row-lg m-b">
-		<div><label data-localize="yes" for="settings-output-suffix">Use patch name for output</label></div>
-		<div class="text-right"><input type="checkbox" id="settings-output-suffix" class="styled" /></div>
-	</div>
-
-	<div class="row row-lg m-b">
-		<div><label data-localize="yes" for="settings-fix-checksum">Fix ROM checksum</label></div>
-		<div class="text-right"><input type="checkbox" id="settings-fix-checksum" class="styled" /></div>
-	</div>
-
-	<div class="row row-lg">
-		<div><label data-localize="yes" for="settings-light-theme">Light theme</label></div>
-		<div class="text-right"><input type="checkbox" id="settings-light-theme" class="styled" /></div>
-	</div>
-
-	<div class="row row-lg m-b">
-		<div><label data-localize="yes" for="settings-cache-roms">Cache base ROMs locally</label></div>
-		<div class="text-right"><input type="checkbox" id="settings-cache-roms" class="styled" checked /></div>
-	</div>
-
-	<hr style="border:none;border-top:1px solid #ddd;margin:16px 0" />
-
-	<!-- Client settings container (dynamically populated by romm-settings.js or client-integration.js) -->
-	<div id="client-settings-container"></div>
-</dialog>
 
 
 </body></html>
