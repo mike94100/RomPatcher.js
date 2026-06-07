@@ -53,13 +53,11 @@ html, body{height:100%}
 #column{
 	display: flex;
 	flex-wrap: nowrap;
-	height: 100%;
 	flex-direction: column;
 }
 header{margin: 1% 0 4%}
-header h1{display:none}
 footer{padding: 50px 0 20px}
-#wrapper{flex-basis:100%}
+#wrapper{flex-basis: 100%}
 
 
 .clickable{cursor:pointer}
@@ -102,7 +100,11 @@ footer{padding: 50px 0 20px}
 
 /* header+footer */
 header{text-align:center}
-header h1{margin:0}
+header h1{
+	margin:0;
+	color:var(--rom-patcher-color-primary);
+	font-size:1.5em;
+}
 header img{max-width:90%; height:192px;}
 
 footer{
@@ -181,7 +183,7 @@ hr{border:none;border-top:1px dotted #bbb;margin:15px 0}
 
 
 
-.tab{background-color:#f9fafa;padding:30px 15px;border-radius: 3px}
+.tab{background-color:#f9fafa;padding:15px 15px;border-radius: 3px}
 
 
 .buttons{
