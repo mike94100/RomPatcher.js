@@ -23,24 +23,39 @@ const settings = {
 if (typeof localStorage !== 'undefined' && localStorage.getItem(LOCAL_STORAGE_SETTINGS_ID)) {
 	try {
 		const loadedSettings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_SETTINGS_ID));
+		const changes = [];
 
-		if (typeof loadedSettings.language === 'string')
+		if (typeof loadedSettings.language === 'string') {
 			settings.language = loadedSettings.language;
+			changes.push('language=' + settings.language);
+		}
 
-		if (typeof loadedSettings.outputSuffix === 'boolean')
+		if (typeof loadedSettings.outputSuffix === 'boolean') {
 			settings.outputSuffix = loadedSettings.outputSuffix;
+			changes.push('outputSuffix=' + settings.outputSuffix);
+		}
 
-		if (typeof loadedSettings.fixChecksum === 'boolean')
+		if (typeof loadedSettings.fixChecksum === 'boolean') {
 			settings.fixChecksum = loadedSettings.fixChecksum;
+			changes.push('fixChecksum=' + settings.fixChecksum);
+		}
 
-		if (typeof loadedSettings.theme === 'string' && ['light'].indexOf(loadedSettings.theme) !== -1)
+		if (typeof loadedSettings.theme === 'string' && ['light'].indexOf(loadedSettings.theme) !== -1) {
 			settings.theme = loadedSettings.theme;
+			changes.push('theme=' + settings.theme);
+		}
 
-		if (typeof loadedSettings.cacheRoms === 'boolean')
+		if (typeof loadedSettings.cacheRoms === 'boolean') {
 			settings.cacheRoms = loadedSettings.cacheRoms;
+			changes.push('cacheRoms=' + settings.cacheRoms);
+		}
+
+		if (changes.length) console.log('Loaded settings from localStorage: ' + changes.join(', '));
 	} catch (err) {
-		console.error('Error while loading settings: ' + err.message);
+		console.error('Error parsing settings from localStorage: ' + err.message);
 	}
+} else {
+	console.log('No saved settings found, using defaults');
 }
 /* Latest patched ROM, captured from RomPatcherWeb's onpatch callback so
    the standalone download handler can use it without poking into the
@@ -72,17 +87,27 @@ const buildSettingsForWebapp = function () {
 		   extension also registers a callback, it will overwrite ours — but its
 		   callback does the same reveal work, so behaviour stays correct. */
 		onloadrom: function (romFile) {
+			/* Skip caching if this ROM was just loaded FROM the cache */
+			if (RomPatcherWeb._romCacheLoaded) {
+				console.log('onloadrom: ROM was loaded from cache, skip caching');
+				return;
+			}
+			console.log('ROM loaded: ' + (romFile ? romFile.fileName : 'unknown') + ' (' + (romFile ? (romFile._u8array ? romFile._u8array.byteLength : '?') : '?') + ' bytes)');
 			/* Auto-cache the ROM once hashes are computed (CRC32, MD5 available immediately, SHA-1 async). */
 			if (settings.cacheRoms && typeof RomCache !== 'undefined' && romFile) {
 				RomCache.put(romFile, romFile.fileName).then(function (entry) {
-					if (entry) console.log('RomCache: cached', entry.name, entry.sha1.substring(0, 12));
+					if (entry) console.log('onloadrom: auto-cached ' + entry.name + ' (SHA-1=' + entry.sha1.substring(0, 12) + '...)');
 				}).catch(function (e) {
-					console.warn('RomCache: failed to cache ROM:', e.message);
+					console.warn('onloadrom: failed to cache ROM: ' + e.message);
 				});
 			}
 		},
 		onvalidaterom: function (romFile, validRom) {
-			if (!validRom) return;
+			if (!validRom) {
+				console.log('ROM validation failed');
+				return;
+			}
+			console.log('ROM validated successfully: ' + (romFile ? romFile.fileName : 'unknown'));
 			var outputSection = document.getElementById('client-output-section');
 			if (outputSection) outputSection.style.display = '';
 			var dlBtn = document.getElementById('client-btn-download');
@@ -96,6 +121,7 @@ const buildSettingsForWebapp = function () {
 			}
 		},
 		onpatch: function (patchedRom) {
+			console.log('Patch applied successfully: ' + (patchedRom ? patchedRom.fileName : 'unknown') + ' (' + (patchedRom ? (patchedRom._u8array ? patchedRom._u8array.byteLength : '?') : '?') + ' bytes)');
 			_latestPatchedRom = patchedRom;
 			var outputSection = document.getElementById('client-output-section');
 			if (outputSection) outputSection.style.display = '';
@@ -116,6 +142,7 @@ const buildSettingsForWebapp = function () {
 	};
 }
 const saveSettings = function () {
+	console.log('Saving settings to localStorage: language=' + settings.language + ', outputSuffix=' + settings.outputSuffix + ', fixChecksum=' + settings.fixChecksum + ', theme=' + settings.theme + ', cacheRoms=' + settings.cacheRoms);
 	if (typeof localStorage !== 'undefined')
 		localStorage.setItem(LOCAL_STORAGE_SETTINGS_ID, JSON.stringify(settings));
 	RomPatcherWeb.setSettings(buildSettingsForWebapp());
@@ -641,34 +668,41 @@ window.addEventListener('load', function (evt) {
 		   4. User uploads manually */
 		RomPatcherWeb._romCacheLoaded = false;
 		if (_parsedRomHash && settings.cacheRoms && typeof RomCache !== 'undefined') {
+			console.log('Attempting to load ROM from cache (hash=' + _parsedRomHash.type + '=' + String(_parsedRomHash.value).substring(0, 12) + '...)');
 			RomCache.findByHash(_parsedRomHash).then(function (cached) {
 				if (cached) {
+					console.log('Cache HIT - loading ' + cached.name + ' from IndexedDB');
 					return RomCache.toBlob(cached).then(function (blob) {
 						return blob.arrayBuffer();
 					}).then(function (ab) {
 						var binFile = new BinFile(ab);
 						binFile.fileName = cached.name;
+						RomPatcherWeb._romCacheLoaded = true;
+						console.log('Providing cached ROM to RomPatcherWeb: ' + cached.name);
 						RomPatcherWeb.provideRomFile(binFile);
 						RomPatcherWeb.getHtmlElements().setFakeFile('rom', cached.name);
 						_showAutoLoadToast('Loaded from cache: ' + cached.name);
-						RomPatcherWeb._romCacheLoaded = true;
 						if (hasRemoteFiles && remoteRomFileUrl) {
 							remoteFilesLoaded.rom = true;
 							_onRemoteFileLoaded();
 						}
 					});
 				}
+				console.log('Cache MISS - no cached ROM found for hash');
 				/* Cache miss — fall through to server auto-lookup or URL fetch */
 				if (!RomPatcherWeb._romCacheLoaded && remoteRomFileUrl) {
+					console.log('Falling through to ?romfile= URL download');
 					_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
 						RomPatcherWeb.provideRomFile(remoteFile);
 						RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
 						_showAutoLoadToast('Loaded from URL: ' + remoteFileName);
 					});
 				}
-			}).catch(function () {
+			}).catch(function (err) {
+				console.warn('Cache lookup error: ' + (err ? err.message : 'unknown'));
 				/* Cache lookup failed — fall through to URL fetch */
 				if (remoteRomFileUrl) {
+					console.log('Falling through to ?romfile= URL download after cache error');
 					_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
 						RomPatcherWeb.provideRomFile(remoteFile);
 						RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
@@ -677,11 +711,14 @@ window.addEventListener('load', function (evt) {
 				}
 			});
 		} else if (remoteRomFileUrl) {
+			console.log('No cache configured/available, fetching ROM from URL: ' + remoteRomFileUrl.substring(0, 80) + '...');
 			_fetchRemoteFile(remoteRomFileUrl, 'rom', function (remoteFile, remoteFileName) {
 				RomPatcherWeb.provideRomFile(remoteFile);
 				RomPatcherWeb.getHtmlElements().setFakeFile('rom', remoteFileName);
 				_showAutoLoadToast('Loaded from URL: ' + remoteFileName);
 			});
+		} else {
+			console.log('No remote ROM URL or hash parameter; user will upload manually');
 		}
 
 		/* ---- Standalone Download button (no server extension required) ----
@@ -796,4 +833,3 @@ window.addEventListener('load', function (evt) {
 		document.getElementById('rom-patcher-container').style.color = 'red';
 	}
 });
-

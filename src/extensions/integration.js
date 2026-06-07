@@ -60,10 +60,16 @@ const ClientIntegration = (function () {
 	/* Extract validation hashes from a parsedPatch */
 	const _cacheHashesFromPatch = function (parsedPatch) {
 		_cachedHashes = null;
-		if (!parsedPatch || typeof parsedPatch.getValidationInfo !== 'function') return;
+		if (!parsedPatch || typeof parsedPatch.getValidationInfo !== 'function') {
+			console.log('[Integration] _cacheHashesFromPatch: no parsedPatch or getValidationInfo');
+			return;
+		}
 		try {
 			const info = parsedPatch.getValidationInfo();
-			if (!info) return;
+			if (!info) {
+				console.log('[Integration] _cacheHashesFromPatch: no validation info');
+				return;
+			}
 			const hashes = {};
 			const crcValue = Array.isArray(info.value) ? info.value[0] : info.value;
 			if (info.type === 'CRC32' && crcValue != null) {
@@ -74,9 +80,14 @@ const ClientIntegration = (function () {
 			} else if (info.type === 'SHA-1' && crcValue != null) {
 				hashes.sha1_hash = String(crcValue).toLowerCase();
 			}
-			if (Object.keys(hashes).length) _cachedHashes = hashes;
+			if (Object.keys(hashes).length) {
+				_cachedHashes = hashes;
+				console.log('[Integration] _cacheHashesFromPatch: extracted ' + Object.keys(hashes).join(',') + ' from patch');
+			} else {
+				console.log('[Integration] _cacheHashesFromPatch: no known hash types found');
+			}
 		} catch (e) {
-			console.warn('[ClientIntegration] Failed to extract hashes from patch:', e.message);
+			console.warn('[Integration] Failed to extract hashes from patch: ' + e.message);
 		}
 	};
 
@@ -197,8 +208,12 @@ const ClientIntegration = (function () {
 	/* Register a client with hooks */
 	const register = function (clientId, romSourceHooks) {
 		const client = ClientRegistry.getClient(clientId);
-		if (!client) { console.error('[ClientIntegration] Client "' + clientId + '" not found in registry'); return false; }
-		if (typeof client.loadSettings === 'function') client.loadSettings();
+		if (!client) { console.error('[Integration] Client "' + clientId + '" not found in registry'); return false; }
+		console.log('[Integration] register: registering client "' + clientId + '" with hooks');
+		if (typeof client.loadSettings === 'function') {
+			console.log('[Integration] register: loading client settings');
+			client.loadSettings();
+		}
 
 		/* Render settings - but only if settings.js hasn't already created the UI */
 		const settingsContainer = document.getElementById('client-settings-container');

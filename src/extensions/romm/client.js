@@ -109,27 +109,35 @@ const RommClient = (function () {
 		},
 
 		configure: function (url, apiKey) {
+			var oldUrl = _url;
 			_url = url.replace(/\/+$/, '');
 			_apiKey = apiKey;
 			_platformsCache = null;
+			console.log('configured: URL=' + _url + ' (was ' + (oldUrl || 'empty') + '), API key set=' + (_apiKey ? 'yes' : 'no'));
 		},
 
 		testConnection: async function () {
+			console.log('Testing connection to ' + _url);
 			const data = await _fetchJson('/api/heartbeat', {
 				headers: _getHeaders()
 			});
-			return data && data.SYSTEM && data.SYSTEM.VERSION ? data.SYSTEM.VERSION : 'unknown';
+			var version = data && data.SYSTEM && data.SYSTEM.VERSION ? data.SYSTEM.VERSION : 'unknown';
+			console.log('Connection test succeeded: v' + version);
+			return version;
 		},
 
 		getPlatforms: async function (forceRefresh) {
 			if (_platformsCache && !forceRefresh && (Date.now() - _platformsCacheTime) < 30000) {
+				console.log('getPlatforms: returning cached data (' + _platformsCache.length + ' platforms)');
 				return _platformsCache;
 			}
+			console.log('getPlatforms: fetching from server' + (forceRefresh ? ' (forced refresh)' : ''));
 			const data = await _fetchJson('/api/platforms', {
 				headers: _getHeaders()
 			});
 			_platformsCache = data;
 			_platformsCacheTime = Date.now();
+			console.log('getPlatforms: got ' + (data ? data.length : 0) + ' platforms');
 			return data;
 		},
 
@@ -145,26 +153,38 @@ const RommClient = (function () {
 			if (hashes.ra_hash) params.append('ra_hash', hashes.ra_hash);
 
 			const queryString = params.toString();
-			if (!queryString) return null;
+			if (!queryString) {
+				console.log('getRomByHash: no hash parameters provided');
+				return null;
+			}
 
+			console.log('getRomByHash: searching with ' + queryString.substring(0, 60) + '...');
 			try {
-				return await _fetchJson('/api/roms/by-hash?' + queryString, {
+				const result = await _fetchJson('/api/roms/by-hash?' + queryString, {
 					headers: _getHeaders()
 				});
+				if (result) console.log('getRomByHash: found ROM id=' + result.id + ' name=' + (result.name || 'unknown'));
+				else console.log('getRomByHash: no ROM found');
+				return result;
 			} catch (err) {
-				if (err.message.indexOf('404') !== -1 || err.message.indexOf('400') !== -1)
+				if (err.message.indexOf('404') !== -1 || err.message.indexOf('400') !== -1) {
+					console.log('getRomByHash: not found (404/400)');
 					return null;
+				}
+				console.error('getRomByHash: error: ' + err.message);
 				throw err;
 			}
 		},
 
 		getRomById: async function (romId) {
+			console.log('getRomById: fetching ROM id=' + romId);
 			return _fetchJson('/api/roms/' + romId, {
 				headers: _getHeaders()
 			});
 		},
 
 		searchRoms: async function (searchTerm, platformIds) {
+			console.log('searchRoms: searching term="' + searchTerm + '"' + (platformIds ? ' platformIds=' + platformIds.join(',') : ''));
 			const params = new URLSearchParams();
 			params.append('search_term', searchTerm);
 			params.append('limit', '50');
@@ -176,12 +196,16 @@ const RommClient = (function () {
 					params.append('platform_ids', id);
 				});
 			}
-			return _fetchJson('/api/roms?' + params.toString(), {
+			const result = await _fetchJson('/api/roms?' + params.toString(), {
 				headers: _getHeaders()
 			});
+			if (result && result.items) console.log('searchRoms: got ' + result.items.length + ' results');
+			else console.log('searchRoms: got 0 results');
+			return result;
 		},
 
 		downloadRom: async function (romId, fileName) {
+			console.log('downloadRom: starting download romId=' + romId + ' fileName=' + fileName);
 			/* Get the actual file name from the ROM details first */
 			let actualFileName = fileName;
 			try {
@@ -191,11 +215,13 @@ const RommClient = (function () {
 				if (details && details.files && details.files.length) {
 					/* Use the first file's name */
 					actualFileName = details.files[0].file_name || details.files[0].file_path || fileName;
+					console.log('downloadRom: resolved actualFileName=' + actualFileName);
 				}
 			} catch (e) {
-				console.warn('[RommClient] Could not fetch ROM details, using provided fileName: ' + e.message);
+				console.warn('downloadRom: could not fetch ROM details, using provided fileName: ' + e.message);
 			}
 			const url = _url + '/api/roms/' + romId + '/content/' + actualFileName;
+			var startTime = Date.now();
 			const response = await fetch(url, {
 				headers: {
 					'Authorization': 'Bearer ' + _apiKey
@@ -203,31 +229,40 @@ const RommClient = (function () {
 			});
 			if (!response.ok)
 				throw new Error('Download failed: HTTP ' + response.status);
-			return response.arrayBuffer();
+			const buf = await response.arrayBuffer();
+			console.log('downloadRom: downloaded ' + buf.byteLength + ' bytes in ' + (Date.now() - startTime) + 'ms');
+			return buf;
 		},
 
 		loadSettings: function () {
+			console.log('loadSettings: loading from localStorage');
 			_loadSettings();
+			console.log('loadSettings: loaded URL=' + (_url ? _url.substring(0, 40) + '...' : '(empty)') + ', API key set=' + (_apiKey ? 'yes' : 'no'));
 		},
 		saveSettings: function () {
 			_settings.url = _url;
 			_settings.apiKey = _apiKey;
+			console.log('saveSettings: saving to localStorage');
 			_saveSettings();
 		},
 		exportSettings: function () {
+			console.log('exportSettings: exporting config');
 			return JSON.stringify({ url: _url, apiKey: _apiKey }, null, 2);
 		},
 		importSettings: function (jsonStr) {
 			const data = JSON.parse(jsonStr);
 			if (typeof data.url === 'string' && typeof data.apiKey === 'string') {
+				console.log('importSettings: importing config URL=' + data.url.substring(0, 40) + '...');
 				this.configure(data.url, data.apiKey);
 				this.saveSettings();
 				return true;
 			}
+			console.warn('importSettings: invalid config format');
 			return false;
 		},
 
 		uploadRom: async function (platformId, fileName, fileBuffer, onProgress) {
+			console.log('uploadRom: starting upload platformId=' + platformId + ' fileName=' + fileName + ' size=' + (fileBuffer ? fileBuffer.byteLength : 0) + ' bytes');
 			// Step 1: Start chunked upload
 			const totalSize = fileBuffer.byteLength;
 			const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
@@ -253,6 +288,7 @@ const RommClient = (function () {
 			}
 			const startData = await startResponse.json();
 			const uploadId = startData.upload_id || startData.id;
+			console.log('uploadRom: started upload id=' + uploadId + ' totalChunks=' + totalChunks);
 
 			// Upload chunks
 			for (let i = 0; i < totalChunks; i++) {

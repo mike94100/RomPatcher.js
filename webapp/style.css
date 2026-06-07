@@ -261,7 +261,7 @@ input[type=file].valid:not(:disabled):not(.empty):hover{
 	background-color:#adf795;
 	background-position: 8px center, right 12px center;
 	background-size: 16px, 16px;
-	background-image:  url(../src/rom-patcher-js/assets/icon_upload.svg), url(../rom-patcher-js/assets/icon_check_circle_green.svg);
+	background-image:  url(../src/rom-patcher-js/assets/icon_upload.svg), url(../src/rom-patcher-js/assets/icon_check_circle_green.svg);
 }
 input[type=file].invalid{
 	background-color:#ffc8c8;
@@ -275,7 +275,7 @@ input[type=file].invalid:not(:disabled):not(.empty):hover{
 	background-color:#ffa3a3;
 	background-position: 8px center, right 12px center;
 	background-size: 16px, 16px;
-	background-image:  url(../src/rom-patcher-js/assets/icon_upload.svg), url(../rom-patcher-js/assets/icon_x_circle_red.svg);
+	background-image:  url(../src/rom-patcher-js/assets/icon_upload.svg), url(../src/rom-patcher-js/assets/icon_x_circle_red.svg);
 }
 
 
@@ -439,14 +439,14 @@ button:disabled{opacity:.35 !important;cursor:not-allowed}
 #patch-builder-error-message {
 	color: var(--rom-patcher-color-danger);
 	padding-left: 20px;
-	background-image: url(../rom-patcher-js/assets/icon_x_circle_red.svg);
+	background-image: url(../src/rom-patcher-js/assets/icon_x_circle_red.svg);
 	background-repeat: no-repeat;
 	background-position: left center;
 }
 #rom-patcher-error-message.warning,
 #patch-builder-error-message.warning {
 	color: var(--rom-patcher-color-warning);
-	background-image: url(../rom-patcher-js/assets/icon_alert_orange.svg);
+	background-image: url(../src/rom-patcher-js/assets/icon_alert_orange.svg);
 }
 
 

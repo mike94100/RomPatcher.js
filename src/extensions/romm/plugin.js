@@ -17,20 +17,20 @@
 		) {
 			_retryCount++;
 			if (_retryCount >= MAX_DEPENDENCY_RETRIES) {
-				console.error('[ClientIntegration:romm] Failed to load dependencies after ' + MAX_DEPENDENCY_RETRIES + ' retries');
+				console.error('Failed to load dependencies after ' + MAX_DEPENDENCY_RETRIES + ' retries');
 				return;
 			}
 			setTimeout(_init, 200);
 			return;
 		}
 
-		/* Register the RomM client with the framework */
-		console.log('[ClientIntegration:romm] Registering RomM client');
+		console.log('Registering RomM client with integration framework');
 
 		/* Helper: download a ROM from server and load it into the ROM file slot */
 		const _loadRomFromServer = async function (client, rom) {
 			const romId = rom.id;
 			const fileName = rom.fs_name || rom.file_name || 'rom.bin';
+			console.log('_loadRomFromServer: downloading romId=' + romId + ' fileName=' + fileName);
 			try {
 				const btns = document.querySelectorAll('#client-search-hash, #client-search-name');
 				btns.forEach(function (b) { b.disabled = true; });
@@ -39,6 +39,7 @@
 				const binFile = new BinFile(arrayBuffer);
 				binFile.fileName = fileName;
 				ClientIntegration.setSelectedRom(rom, rom.platform_id || null);
+				console.log('_loadRomFromServer: downloaded ' + arrayBuffer.byteLength + ' bytes, providing to RomPatcherWeb');
 
 				if (typeof RomPatcherWeb !== 'undefined' && RomPatcherWeb.provideRomFile) {
 					RomPatcherWeb.provideRomFile(binFile, true);
@@ -47,7 +48,7 @@
 					}
 				}
 			} catch (e) {
-				console.error('[ClientIntegration:romm] Failed to download ROM: ' + e.message);
+				console.error('Failed to download ROM: ' + e.message);
 				alert('Failed to download ROM from server: ' + e.message);
 			} finally {
 				const btns = document.querySelectorAll('#client-search-hash, #client-search-name');
@@ -58,7 +59,11 @@
 		ClientIntegration.register('romm', {
 			/* Auto-lookup: called when a patch with hashes is loaded */
 			onAutoLookup: async function (client, hashes) {
-				if (!hashes) return;
+				if (!hashes) {
+					console.log('onAutoLookup: no hashes provided, skipping');
+					return;
+				}
+				console.log('onAutoLookup: starting auto-lookup with hashes');
 
 				const hashInput = document.getElementById('client-hash-value');
 				if (hashInput) {
@@ -68,24 +73,30 @@
 				try {
 					const rom = await client.getRomByHash(hashes);
 					if (rom) {
-						/* Auto-download and load into ROM slot */
+						console.log('onAutoLookup: found ROM id=' + rom.id + ' on server, auto-loading');
 						await _loadRomFromServer(client, rom);
+					} else {
+						console.log('onAutoLookup: no ROM found on server for given hash');
 					}
 				} catch (e) {
-					console.warn('[ClientIntegration:romm] Auto-lookup failed: ' + e.message);
+					console.warn('Auto-lookup failed: ' + e.message);
 				}
 			},
 
 			/* Search by hash button */
 			onSearchByHash: async function (client, hashes) {
+				console.log('onSearchByHash: searching by hash');
 				try {
 					const rom = await client.getRomByHash(hashes);
 					if (rom) {
+						console.log('onSearchByHash: found ROM id=' + rom.id + ', loading');
 						await _loadRomFromServer(client, rom);
 					} else {
+						console.log('onSearchByHash: no ROM found');
 						alert('No ROM found with that hash on RomM.');
 					}
 				} catch (e) {
+					console.error('Hash search failed: ' + e.message);
 					alert('RomM hash search failed: ' + e.message);
 				}
 			},

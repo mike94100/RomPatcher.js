@@ -11,11 +11,18 @@
 	/* Load RomM config from localStorage */
 	const loadConfig = function() {
 		try {
-			return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-		} catch(e) { return {}; }
+			const cfg = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+			if (cfg.url) console.log('loadConfig: loaded URL=' + cfg.url.substring(0, 40) + '...');
+			else console.log('loadConfig: no config found');
+			return cfg;
+		} catch(e) {
+			console.warn('loadConfig: parse error: ' + e.message);
+			return {};
+		}
 	};
 
 	const saveConfig = function(url, apiKey) {
+		console.log('saveConfig: saving URL=' + (url ? url.substring(0, 40) + '...' : '(empty)') + ', API key set=' + (apiKey ? 'yes' : 'no'));
 		localStorage.setItem(SETTINGS_KEY, JSON.stringify({
 			url: url.replace(/\/+$/, ''),
 			apiKey: apiKey
@@ -23,6 +30,7 @@
 	};
 
 	const clearConfig = function() {
+		console.log('clearConfig: removing RomM settings from localStorage');
 		localStorage.removeItem(SETTINGS_KEY);
 	};
 
