@@ -1,4 +1,4 @@
-# Rom Patcher JS
+# RomPatcherJS+
 A ROM patcher based on RomPatcherJS with additional functionality.
 
 ## URL Parameters
@@ -22,18 +22,30 @@ Server integrations allow for reading and writing data to self-hosted ROM manage
   * roms.read - Download ROM from your library for patching
   * roms.write - Upload patched ROM to your library
   * platforms.read - Get platforms for selecting where to upload patched ROM
-  * tasks.run - Rescan library after upload (Does not currently work)
+  * tasks.run - Rescan library after upload (Not currently supported)
+
+## Cache
+ROMs are cached locally when provided via extension, romfile parameter, or manually. Cached ROMs may be manually selected for use in patching. Cached ROMs may be manually deleted.
+
+## URL Builder
+The URL Builder helps create formatted URLs with URL parameters. It can also breakdown a provided URL to be more easily edited.
 
 ## Usage
 ```bash
 https://mike94100.github.io/RomPatcher.js/?patchfile=<URL>&romfile=<URL>&romhash=<CRC32/MD5/SHA1>&outputname=<STRING>
 ```
 
-## Cache
-ROMs are cached when provided so you do not need to redownload (from configured server or romfile parameter) or reupload manually. You may manually select a file from the cache to use, or delete files from the cache.
-
 ## Examples
-[Pokemon Sienna ips patch - Base FireRed Rev 0 - sets patchfile, romhash, outputname](https://mike94100.github.io/RomPatcher.js/?patchfile=https%3A%2F%2Fraw.githubusercontent.com%2Fmike94100%2Frompatcher-rs%2Frefs%2Fheads%2Fmain%2Fpatches%2FPokemon_Sienna_(Complete)_(FireRed).ips&romhash=41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc&outputname=Pokemon%20Sienna%20(Rev%206)%20(Hack))
+* [Pokemon Sienna IPS - FireRed Rev 0 - patchfile, romhash, outputname](https://mike94100.github.io/RomPatcher.js/?patchfile=https%3A%2F%2Fraw.githubusercontent.com%2Fmike94100%2Frompatcher-rs%2Frefs%2Fheads%2Fmain%2Fpatches%2FPokemon_Sienna_(Complete)_(FireRed).ips&romhash=41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc&outputname=Pokemon%20Sienna%20(Rev%206)%20(Hack))
+* [Pokemon Crystal Legacy BPS - Crystal Rev 0 - patchfile, outputname](https://mike94100.github.io/RomPatcher.js/?patchfile=https%3A%2F%2Fraw.githubusercontent.com%2Fmike94100%2Frompatcher-rs%2Frefs%2Fheads%2Fmain%2Fpatches%2FPokemon_Crystal_Legacy_(v1.3.1)_(Crystal).bps&outputname=Pokemon%20Crystal%20Legacy(Rev%201.3.1)%20(Hack))
+
+## Issues
+
+### Patch and Rom File URL Parameters require CORS
+The site cannot download files from sites that do not allow Cross-Origin Resource Sharing (CORS). The URL Builder should help to test if links will work. As an example, GitHub Releases will not work, but files committed to the repo will work through the raw.githubusercontent.com link. This could also be worked around with a CORS proxy.
+
+### Romm doesn't scan after uploads
+Files uploaded to Romm via API do not automatically scan like they would via UI. There is no mechanism currently to run a scan via API. You will need to run a scan manually, run scans on a schedule, or use the file system watcher scan.
 
 ## AI
-Yes this is vibe-coded and I have minimal experience with JS. I wanted to put together features that I thought would be beneficial for a general-purpose ROM patcher. If you do not want to use it, understood. If you want to improve it, please do.
+Yes this is vibe-coded. I wanted to put together features that I thought would be beneficial for a general-purpose ROM patcher. If you do not want to use it, understood. If you want to improve it, please do.
