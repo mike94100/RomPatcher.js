@@ -131,6 +131,22 @@
 				</div>
 			</div>
 
+			<!-- PREVIOUS VERSION (Previous game to use as name & save source -->
+			<div id="client-prev-version-area" class="m-b" style="display:none">
+				<div class="row m-b">
+					<div class="text-right"><label>Previous Version:</label></div>
+					<div class="rom-patcher-container-input">
+						<input type="text" id="client-prev-version-search" placeholder="Search for a previous version in RomM..." style="width:100%;box-sizing:border-box" />
+						<div style="margin-top:4px">
+							<button id="client-prev-version-search-btn" class="rom-patcher-btn-small">Search Previous</button>
+						</div>
+					</div>
+				</div>
+				<div id="client-prev-version-results" class="m-b" style="display:none;max-height:200px;overflow-y:auto;font-size:12px"></div>
+				<div id="client-prev-version-selected" class="m-b" style="display:none;font-size:12px;color:green;padding:4px 8px;background:#f0fff0;border:1px solid #4caf50;border-radius:4px"></div>
+				<div id="client-prev-version-save-status" class="m-b" style="display:none;font-size:11px;color:#666;padding:4px 8px"></div>
+			</div>
+
 			<!-- OUTPUT OPTIONS & ACTIONS -->
 			<div id="client-output-section" class="m-b" style="display:none">
 				<div class="row m-b">
@@ -202,43 +218,66 @@
 		</div>
 
 		<div id="url-builder-container" style="display:none">
+			<div style="font-weight:bold;font-size:13px;margin-bottom:8px">Import</div>
 			<div class="row m-b">
-				<div class="text-right"><label>Import URL:</label></div>
+				<div class="text-right"><label>From URL:</label></div>
 				<div class="rom-patcher-container-input">
 					<input type="url" id="url-builder-import" placeholder="Paste a RomPatcher.js URL to parse its parameters" style="width:100%;box-sizing:border-box;padding:6px" />
-					<div style="margin-top:4px">
-						<button id="url-builder-import-btn" class="rom-patcher-btn-small">Import</button>
-						<span id="url-builder-status-import" class="text-muted" style="font-size:11px;margin-left:6px"></span>
-					</div>
 				</div>
 			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
+				<div></div>
+				<div>
+					<button id="url-builder-import-btn" class="rom-patcher-btn-small">Import</button>
+					<span id="url-builder-status-import" class="text-muted" style="font-size:11px;margin-left:6px"></span>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div class="text-right"><label>From JSON:</label></div>
+				<div>
+					<button id="url-builder-import-json" class="rom-patcher-btn-small">Import JSON</button>
+					<span id="url-builder-status-json" class="text-muted" style="font-size:11px;margin-left:6px"></span>
+				</div>
+			</div>
+
+			<hr style="border:none;border-top:1px solid #ddd;margin:16px 0" />
+			<div style="font-weight:bold;font-size:13px;margin-bottom:8px">URL Parameters</div>
 			<div class="row m-b">
 				<div class="text-right"><label>Patch file URL:</label></div>
 				<div class="rom-patcher-container-input">
 					<input type="url" id="url-builder-patchfile" placeholder="https://example.com/patch.ips" style="width:100%;box-sizing:border-box;padding:6px" />
-					<div style="margin-top:4px">
-						<button id="url-builder-test-patchfile" class="rom-patcher-btn-small">Test</button>
-						<span id="url-builder-status-patchfile" class="text-muted" style="font-size:11px;margin-left:6px"></span>
-					</div>
+				</div>
+			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
+				<div></div>
+				<div>
+					<button id="url-builder-test-patchfile" class="rom-patcher-btn-small">Test</button>
+					<span id="url-builder-status-patchfile" class="text-muted" style="font-size:11px;margin-left:6px"></span>
 				</div>
 			</div>
 			<div class="row m-b">
 				<div class="text-right"><label>ROM file URL:</label></div>
 				<div class="rom-patcher-container-input">
 					<input type="url" id="url-builder-romfile" placeholder="https://example.com/rom.sfc" style="width:100%;box-sizing:border-box;padding:6px" />
-					<div style="margin-top:4px">
-						<button id="url-builder-test-romfile" class="rom-patcher-btn-small">Test</button>
-						<span id="url-builder-status-romfile" class="text-muted" style="font-size:11px;margin-left:6px"></span>
-					</div>
+				</div>
+			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
+				<div></div>
+				<div>
+					<button id="url-builder-test-romfile" class="rom-patcher-btn-small">Test</button>
+					<span id="url-builder-status-romfile" class="text-muted" style="font-size:11px;margin-left:6px"></span>
 				</div>
 			</div>
 			<div class="row m-b">
 				<div class="text-right"><label>ROM hash:</label></div>
 				<div class="rom-patcher-container-input">
 					<input type="text" id="url-builder-romhash" placeholder="CRC32 (8 hex), MD5 (32 hex) or SHA-1 (40 hex)" style="width:100%;box-sizing:border-box;padding:6px" />
-					<div style="margin-top:4px">
-						<span id="url-builder-status-romhash" class="text-muted" style="font-size:11px"></span>
-					</div>
+				</div>
+			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
+				<div></div>
+				<div>
+					<span id="url-builder-status-romhash" class="text-muted" style="font-size:11px"></span>
 				</div>
 			</div>
 			<div class="row m-b">
@@ -247,13 +286,48 @@
 					<input type="text" id="url-builder-outputname" placeholder="Custom output filename (no extension)" style="width:100%;box-sizing:border-box;padding:6px" />
 				</div>
 			</div>
+
+			<hr style="border:none;border-top:1px solid #ddd;margin:16px 0" />
+			<div style="font-weight:bold;font-size:13px;margin-bottom:8px">Metadata URL Parameter</div>
 			<div class="row m-b">
+				<div class="text-right"><label>Metadata URL:</label></div>
+				<div class="rom-patcher-container-input">
+					<input type="url" id="url-builder-metadata-url" placeholder="https://example.com/rompatcher-metadata.json" style="width:100%;box-sizing:border-box;padding:6px" />
+				</div>
+			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
 				<div></div>
 				<div>
-					<input type="text" id="url-builder-output" readonly style="width:100%;box-sizing:border-box;padding:6px;background:#f0f0f0;font-family:monospace;font-size:12px" />
-					<div style="margin-top:4px">
-						<button id="url-builder-copy" class="rom-patcher-btn-small">Copy URL</button>
-					</div>
+					<button id="url-builder-test-metadata-url" class="rom-patcher-btn-small">Test</button>
+					<span id="url-builder-status-metadata-url" class="text-muted" style="font-size:11px;margin-left:6px"></span>
+				</div>
+			</div>
+
+			<hr style="border:none;border-top:1px solid #ddd;margin:16px 0" />
+			<div style="font-weight:bold;font-size:13px;margin-bottom:8px">Output</div>
+			<div class="row m-b">
+				<div class="text-right"><label>URL (raw params):</label></div>
+				<div>
+					<input type="text" id="url-builder-output-raw" readonly style="width:100%;box-sizing:border-box;padding:6px;background:#f0f0f0;font-family:monospace;font-size:12px" />
+				</div>
+			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
+				<div></div>
+				<div>
+					<button id="url-builder-copy-raw" class="rom-patcher-btn-small">Copy</button>
+				</div>
+			</div>
+			<div class="row m-b">
+				<div class="text-right"><label>URL (metadata):</label></div>
+				<div>
+					<input type="text" id="url-builder-output-metadata" readonly style="width:100%;box-sizing:border-box;padding:6px;background:#f0f0f0;font-family:monospace;font-size:12px" />
+				</div>
+			</div>
+			<div class="row" style="margin-top:-4px;margin-bottom:12px">
+				<div></div>
+				<div>
+					<button id="url-builder-copy-metadata" class="rom-patcher-btn-small">Copy</button>
+					<button id="url-builder-export-json" class="rom-patcher-btn-small">Export JSON</button>
 				</div>
 			</div>
 		</div>

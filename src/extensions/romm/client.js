@@ -204,6 +204,101 @@ const RommClient = (function () {
 			return result;
 		},
 
+		/* Get the latest save file (not save state) for a given ROM */
+		getSavesSummary: async function (romId) {
+			console.log('getSavesSummary: fetching saves for romId=' + romId);
+			return _fetchJson('/api/saves/summary?rom_id=' + romId, {
+				headers: _getHeaders()
+			});
+		},
+
+		/* Download a save file's content by save ID */
+		downloadSaveContent: async function (saveId) {
+			console.log('downloadSaveContent: downloading save id=' + saveId);
+			const response = await fetch(_url + '/api/saves/' + saveId + '/content', {
+				headers: {
+					'Authorization': 'Bearer ' + _apiKey
+				}
+			});
+			if (!response.ok)
+				throw new Error('Download save failed: HTTP ' + response.status);
+			const buf = await response.arrayBuffer();
+			console.log('downloadSaveContent: downloaded ' + buf.byteLength + ' bytes');
+			return buf;
+		},
+
+		/* Upload a save file for a given ROM */
+		uploadSave: async function (romId, fileName, fileBuffer, onProgress) {
+			console.log('uploadSave: uploading save for romId=' + romId + ' fileName=' + fileName + ' size=' + (fileBuffer ? fileBuffer.byteLength : 0) + ' bytes');
+			const formData = new FormData();
+			const blob = new Blob([fileBuffer], { type: 'application/octet-stream' });
+			formData.append('saveFile', blob, fileName);
+
+			const response = await fetch(_url + '/api/saves?rom_id=' + romId, {
+				method: 'POST',
+				headers: {
+					'Authorization': 'Bearer ' + _apiKey
+				},
+				body: formData
+			});
+			if (!response.ok) {
+				let errorMsg = 'Save upload failed: HTTP ' + response.status;
+				if (response.status === 403) {
+					errorMsg += ': API token missing required scope "assets.write". Generate a new token in RomM Settings → Users → Client Tokens with the "assets.write" scope.';
+				} else {
+					try {
+						const errorData = await response.json();
+						if (errorData.detail)
+							errorMsg += ': ' + (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail));
+					} catch (e) {}
+				}
+				throw new Error(errorMsg);
+			}
+			const result = await response.json();
+			console.log('uploadSave: uploaded save id=' + result.id);
+			return result;
+		},
+
+		/* Check if a file name already exists for a given search on the platform */
+		romExistsByName: async function (platformId, fileName) {
+			console.log('romExistsByName: checking if "' + fileName + '" exists on platform ' + platformId);
+			try {
+				const result = await this.searchRoms(fileName, [platformId]);
+				if (result && result.items) {
+					for (var i = 0; i < result.items.length; i++) {
+						if (result.items[i].fs_name === fileName || result.items[i].fs_name_no_ext === fileName.replace(/\.[^.]+$/, '')) {
+							console.log('romExistsByName: found existing ROM with same name id=' + result.items[i].id);
+							return true;
+						}
+					}
+				}
+				return false;
+			} catch (e) {
+				console.warn('romExistsByName: search failed: ' + e.message);
+				return false;
+			}
+		},
+
+		/* Search for a ROM by SHA-1 hash (after upload to find the new ROM) */
+		getRomBySha1: async function (sha1Hash) {
+			console.log('getRomBySha1: searching with sha1=' + sha1Hash);
+			try {
+				const result = await _fetchJson('/api/roms/by-hash?sha1_hash=' + sha1Hash, {
+					headers: _getHeaders()
+				});
+				if (result) console.log('getRomBySha1: found ROM id=' + result.id + ' name=' + (result.name || 'unknown'));
+				else console.log('getRomBySha1: no ROM found');
+				return result;
+			} catch (err) {
+				if (err.message.indexOf('404') !== -1 || err.message.indexOf('400') !== -1) {
+					console.log('getRomBySha1: not found (404/400)');
+					return null;
+				}
+				console.error('getRomBySha1: error: ' + err.message);
+				throw err;
+			}
+		},
+
 		downloadRom: async function (romId, fileName) {
 			console.log('downloadRom: starting download romId=' + romId + ' fileName=' + fileName);
 			/* Get the actual file name from the ROM details first */

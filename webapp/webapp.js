@@ -248,12 +248,13 @@ window.addEventListener('load', function (evt) {
 		var elRomUrl = document.getElementById('url-builder-romfile');
 		var elRomHash = document.getElementById('url-builder-romhash');
 		var elOutputName = document.getElementById('url-builder-outputname');
-		var elOutput = document.getElementById('url-builder-output');
+		var elOutputRaw = document.getElementById('url-builder-output-raw');
+		var elOutputMeta = document.getElementById('url-builder-output-metadata');
 		var elStatusPatch = document.getElementById('url-builder-status-patchfile');
 		var elStatusRom = document.getElementById('url-builder-status-romfile');
 		var elStatusHash = document.getElementById('url-builder-status-romhash');
 
-		if (!elOutput) return; /* URL Builder elements not found */
+		if (!elOutputRaw) return; /* URL Builder elements not found */
 
 		var _parseImportUrl = function () {
 			var url = elImport.value.trim();
@@ -319,8 +320,19 @@ window.addEventListener('load', function (evt) {
 			if (rf) params.push('romfile=' + encodeURIComponent(rf));
 			if (rh) params.push('romhash=' + encodeURIComponent(rh));
 			if (on) params.push('outputname=' + encodeURIComponent(on));
-			if (params.length) elOutput.value = base + '?' + params.join('&');
-			else elOutput.value = base;
+			if (params.length) elOutputRaw.value = base + '?' + params.join('&');
+			else elOutputRaw.value = base;
+
+			/* Also update the metadata URL output field */
+			if (elOutputMeta) {
+				var metaUrlInput = document.getElementById('url-builder-metadata-url');
+				var metaUrl = metaUrlInput ? metaUrlInput.value.trim() : '';
+				if (metaUrl) {
+					elOutputMeta.value = base + '?metadata=' + encodeURIComponent(metaUrl);
+				} else {
+					elOutputMeta.value = '';
+				}
+			}
 		};
 
 		var _validateHash = function () {
@@ -344,21 +356,155 @@ window.addEventListener('load', function (evt) {
 			_testUrl(elRomUrl.value.trim(), elStatusRom, this);
 		});
 
-		document.getElementById('url-builder-copy').addEventListener('click', function () {
-			if (!elOutput.value) return;
-			navigator.clipboard.writeText(elOutput.value).then(function () {
+		document.getElementById('url-builder-copy-raw').addEventListener('click', function () {
+			if (!elOutputRaw.value) return;
+			navigator.clipboard.writeText(elOutputRaw.value).then(function () {
 				var origText = this.textContent;
 				this.textContent = 'Copied!';
 				var self = this;
 				setTimeout(function () { self.textContent = origText; }, 2000);
 			}.bind(this)).catch(function () {
-				/* fallback */
-				elOutput.select();
+				elOutputRaw.select();
 				document.execCommand('copy');
 			});
 		});
+		if (elOutputMeta) {
+			document.getElementById('url-builder-copy-metadata').addEventListener('click', function () {
+				if (!elOutputMeta.value) return;
+				navigator.clipboard.writeText(elOutputMeta.value).then(function () {
+					var origText = this.textContent;
+					this.textContent = 'Copied!';
+					var self = this;
+					setTimeout(function () { self.textContent = origText; }, 2000);
+				}.bind(this)).catch(function () {
+					elOutputMeta.select();
+					document.execCommand('copy');
+				});
+			});
+		}
 
 		_updateUrl();
+
+		/* ---- Metadata URL input triggers output update ---- */
+		(function () {
+			var metaUrlInput = document.getElementById('url-builder-metadata-url');
+			if (metaUrlInput) {
+				metaUrlInput.addEventListener('input', _updateUrl);
+			}
+		})();
+
+		/* ---- Metadata URL test button ---- */
+		(function () {
+			var metaUrlInput = document.getElementById('url-builder-metadata-url');
+			var testBtn = document.getElementById('url-builder-test-metadata-url');
+			var statusEl = document.getElementById('url-builder-status-metadata-url');
+			if (metaUrlInput && testBtn) {
+				testBtn.addEventListener('click', function () {
+					var url = metaUrlInput.value.trim();
+					if (!url) { if (statusEl) statusEl.innerHTML = ''; return; }
+					if (!/^https?:\/\//i.test(url)) { if (statusEl) statusEl.innerHTML = '<span style="color:orange">Invalid URL</span>'; return; }
+					testBtn.disabled = true;
+					testBtn.textContent = 'Testing...';
+					var controller = new AbortController();
+					var timeout = setTimeout(function () { controller.abort(); }, 5000);
+					fetch(url, { method: 'GET', signal: controller.signal, mode: 'cors' })
+						.then(function (r) {
+							clearTimeout(timeout);
+							if (!r.ok) throw new Error('HTTP ' + r.status);
+							return r.json();
+						})
+						.then(function (data) {
+							var fields = ['patchfile', 'romfile', 'romhash', 'outputname'];
+							var found = fields.filter(function (f) { return typeof data[f] === 'string'; });
+							if (statusEl) statusEl.innerHTML = '<span style="color:green">OK (' + found.length + '/' + fields.length + ' fields)</span>';
+						})
+						.catch(function (err) {
+							clearTimeout(timeout);
+							var msg = err.name === 'AbortError' ? 'Timeout' : err.message;
+							if (statusEl) statusEl.innerHTML = '<span style="color:red">' + msg + '</span>';
+						})
+						.finally(function () { testBtn.disabled = false; testBtn.textContent = 'Test'; });
+				});
+			}
+		})();
+
+		/* ---- JSON metadata import/export ---- */
+		var _jsonStatusEl = document.getElementById('url-builder-status-json');
+		var _setJsonStatus = function (msg, isError) {
+			if (_jsonStatusEl) {
+				_jsonStatusEl.innerHTML = isError ? '<span style="color:red">' + msg + '</span>' : '<span style="color:green">' + msg + '</span>';
+			}
+		};
+
+		/* Export JSON: serialize URL builder fields to a JSON file */
+		var _exportJson = function () {
+			var pf = elPatchUrl.value.trim();
+			var rf = elRomUrl.value.trim();
+			var rh = elRomHash.value.trim();
+			var on = elOutputName ? elOutputName.value.trim() : '';
+			if (!pf && !rf && !rh && !on) {
+				_setJsonStatus('No parameters to export.', true);
+				return;
+			}
+			var meta = {};
+			if (pf) meta.patchfile = pf;
+			if (rf) meta.romfile = rf;
+			if (rh) meta.romhash = rh;
+			if (on) meta.outputname = on;
+
+			var json = JSON.stringify(meta, null, 2);
+			var blob = new Blob([json], { type: 'application/json' });
+			var url = URL.createObjectURL(blob);
+			var a = document.createElement('a');
+			a.href = url;
+			a.download = 'rompatcher-metadata.json';
+			document.body.appendChild(a);
+			a.click();
+			URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+			_setJsonStatus('Exported successfully.', false);
+		};
+
+		/* Import JSON: parse a JSON file and populate URL builder fields */
+		var _importJson = function () {
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.json';
+			input.addEventListener('change', function (evt) {
+				if (!this.files || !this.files.length) return;
+				var reader = new FileReader();
+				reader.onload = function (evt) {
+					try {
+						var data = JSON.parse(evt.target.result);
+						if (typeof data !== 'object' || data === null) {
+							_setJsonStatus('Invalid JSON: expected an object.', true);
+							return;
+						}
+						var hadAny = false;
+						if (typeof data.patchfile === 'string') { elPatchUrl.value = data.patchfile; hadAny = true; }
+						if (typeof data.romfile === 'string') { elRomUrl.value = data.romfile; hadAny = true; }
+						if (typeof data.romhash === 'string') { elRomHash.value = data.romhash; hadAny = true; _validateHash(); }
+						if (typeof data.outputname === 'string' && elOutputName) { elOutputName.value = data.outputname; hadAny = true; }
+						if (hadAny) {
+							_updateUrl();
+							_setJsonStatus('Imported successfully.', false);
+						} else {
+							_setJsonStatus('No recognized fields found in JSON.', true);
+						}
+					} catch (e) {
+						_setJsonStatus('Failed to parse JSON: ' + e.message, true);
+					}
+				};
+				reader.readAsText(this.files[0]);
+			});
+			input.click();
+		};
+
+		/* Wire up Export/Import buttons */
+		var exportBtn = document.getElementById('url-builder-export-json');
+		var importBtn = document.getElementById('url-builder-import-json');
+		if (exportBtn) exportBtn.addEventListener('click', _exportJson);
+		if (importBtn) importBtn.addEventListener('click', _importJson);
 	})();
 
 	/* ---- Base ROM Cache ---- */

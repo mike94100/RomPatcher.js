@@ -14,7 +14,11 @@ Server integrations allow for reading and writing data to self-hosted ROM manage
 * Settings are stored locally, API keys stay on device
 * Settings can be imported & exported as json
 
-### Romm
+### [Romm](https://docs.romm.app/latest/)
+* Features
+  * Get base ROM by hash or name
+  * Get previous version for name format or to copy latest save (copying save not currently supported)
+  * Upload to Romm library
 * Settings
   * url - Publicly accessible path to your Romm instance
   * apikey - Configured API key for a Romm user
@@ -23,6 +27,8 @@ Server integrations allow for reading and writing data to self-hosted ROM manage
   * roms.write - Upload patched ROM to your library
   * platforms.read - Get platforms for selecting where to upload patched ROM
   * tasks.run - Rescan library after upload (Not currently supported)
+  * assets.read - Get save file from previous version (Not currently supported)
+  * assets.write - Write previous version save file to new upload (not currently supported)
 
 ## Cache
 ROMs are cached locally when provided via extension, romfile parameter, or manually. Cached ROMs may be manually selected for use in patching. Cached ROMs may be manually deleted.
