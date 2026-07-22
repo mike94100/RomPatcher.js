@@ -1,4 +1,4 @@
-/* Rom Patcher JS (complete webapp implementation) v20240809 - Marc Robledo 2016-2024 - http://www.marcrobledo.com/license */
+/* Rom Patcher JS (complete webapp implementation) v20260711 - Marc Robledo 2016-2026 - http://www.marcrobledo.com/license */
 
 
 /* service worker */
@@ -184,6 +184,7 @@ window.addEventListener('load', function (evt) {
 		settings.language = this.value;
 		saveSettings();
 		RomPatcherWeb.translateUI(settings.language);
+		RomPatcherDonationInfo.retranslate();
 	});
 
 	document.getElementById('settings-output-suffix').checked = !settings.outputSuffix;

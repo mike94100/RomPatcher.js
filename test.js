@@ -43,9 +43,9 @@
 const chalk = require('chalk');
 const { existsSync } = require('fs');
 
-const BinFile = require('./rom-patcher-js/modules/BinFile');
-const HashCalculator = require('./rom-patcher-js/modules/HashCalculator');
-const RomPatcher = require('./rom-patcher-js/RomPatcher');
+const BinFile = require('./src/rom-patcher-js/modules/BinFile');
+const HashCalculator = require('./src/rom-patcher-js/modules/HashCalculator');
+const RomPatcher = require('./src/rom-patcher-js/RomPatcher');
 
 
 
