@@ -459,8 +459,7 @@ const RomPatcherWeb = (function () {
 		romFile._u8array = event.data.u8array;
 
 		if (WEB_CRYPTO_AVAILABLE) {
-			romFile.hashSHA1().then(function (res) {
-				romFile._sha1 = res;
+			romFile.hashSHA1(_getChecksumStartOffset()).then(function (res) {
 				htmlElements.setText('span-sha1', res);
 				/* re-validate after SHA1 resolves, in case patch expects SHA1 validation */
 				if (patch && typeof patch.validateSource === 'function') {
@@ -1284,7 +1283,7 @@ const ZIPManager = (function (romPatcherWeb) {
 
 	const ZIP_MAGIC = '\x50\x4b\x03\x04';
 
-	const FILTER_PATCHES = /\.(ips|ups|bps|aps|rup|ppf|ebp|bdf|bspatch|mod|xdelta|vcdiff)$/i;
+	const FILTER_PATCHES = /\.(ips|ups|bps|aps|rup|ppf|ebp|bdf|bspatch|mod|xdelta|xdelta3|vcdiff)$/i;
 	//const FILTER_ROMS=/(?<!\.(txt|diz|rtf|docx?|xlsx?|html?|pdf|jpe?g|gif|png|bmp|webp|zip|rar|7z))$/i; //negative lookbehind is not compatible with Safari https://stackoverflow.com/a/51568859
 	const FILTER_NON_ROMS = /(\.(txt|diz|rtf|docx?|xlsx?|html?|pdf|jpe?g|gif|png|bmp|webp|zip|rar|7z))$/i;
 
