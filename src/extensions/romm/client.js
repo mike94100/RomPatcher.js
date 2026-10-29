@@ -19,6 +19,7 @@
  *   downloadRom(id, name)   - returns Promise<ArrayBuffer>
  *   uploadRom(pid, name, buf, onProg) - returns Promise<boolean>
  *   getPlatforms()          - returns Promise<object[]>
+ *   scanLibrary(platformId) - returns Promise<object>
  *   loadSettings()          - load from localStorage
  *   saveSettings()          - save to localStorage
  *   exportSettings()        - returns JSON string
@@ -29,14 +30,14 @@ const RommClient = (function () {
 	const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks for upload
 
 	let _url = '';
-	let _apiKey = '';
+	let _apiToken = '';
 
 	let _platformsCache = null;
 	let _platformsCacheTime = 0;
 
 	const _getHeaders = function () {
 		return {
-			'Authorization': 'Bearer ' + _apiKey,
+			'Authorization': 'Bearer ' + _apiToken,
 			'Content-Type': 'application/json'
 		};
 	};
@@ -56,7 +57,7 @@ const RommClient = (function () {
 	};
 
 	const SETTINGS_KEY = 'rom-patcher-js-client-romm';
-	const _settings = { url: '', apiKey: '' };
+	const _settings = { url: '', apiToken: '' };
 
 	const _loadSettings = function () {
 		if (typeof localStorage === 'undefined') return;
@@ -65,10 +66,10 @@ const RommClient = (function () {
 			if (stored) {
 				const parsed = JSON.parse(stored);
 				if (typeof parsed.url === 'string') _settings.url = parsed.url;
-				if (typeof parsed.apiKey === 'string') _settings.apiKey = parsed.apiKey;
-				if (_settings.url && _settings.apiKey) {
+				if (typeof parsed.apiToken === 'string') _settings.apiToken = parsed.apiToken;
+				if (_settings.url && _settings.apiToken) {
 					_url = _settings.url;
-					_apiKey = _settings.apiKey;
+					_apiToken = _settings.apiToken;
 				}
 			}
 		} catch (e) {
@@ -91,29 +92,29 @@ const RommClient = (function () {
 		name: 'RomM',
 		settingsFields: [
 			{ id: 'url', label: 'Server URL', type: 'url', placeholder: 'https://romm.example.com' },
-			{ id: 'apiKey', label: 'API Key', type: 'password', placeholder: 'romm_xxxxxxxx...' }
+			{ id: 'apiToken', label: 'API Token', type: 'password', placeholder: 'rmm_xxx...' }
 		],
 
 		/* Expose internal settings as properties so client-integration can read/write them */
 		get _url() { return _url; },
 		set _url(v) { _url = v; },
-		get _apiKey() { return _apiKey; },
-		set _apiKey(v) { _apiKey = v; },
+		get _apiToken() { return _apiToken; },
+		set _apiToken(v) { _apiToken = v; },
 
 		isConfigured: function () {
-			return _url && _apiKey;
+			return _url && _apiToken;
 		},
 
 		getUrl: function () {
 			return _url;
 		},
 
-		configure: function (url, apiKey) {
+		configure: function (url, apiToken) {
 			var oldUrl = _url;
 			_url = url.replace(/\/+$/, '');
-			_apiKey = apiKey;
+			_apiToken = apiToken;
 			_platformsCache = null;
-			console.log('configured: URL=' + _url + ' (was ' + (oldUrl || 'empty') + '), API key set=' + (_apiKey ? 'yes' : 'no'));
+			console.log('configured: URL=' + _url + ' (was ' + (oldUrl || 'empty') + '), API key set=' + (_apiToken ? 'yes' : 'no'));
 		},
 
 		testConnection: async function () {
@@ -217,7 +218,7 @@ const RommClient = (function () {
 			console.log('downloadSaveContent: downloading save id=' + saveId);
 			const response = await fetch(_url + '/api/saves/' + saveId + '/content', {
 				headers: {
-					'Authorization': 'Bearer ' + _apiKey
+					'Authorization': 'Bearer ' + _apiToken
 				}
 			});
 			if (!response.ok)
@@ -237,7 +238,7 @@ const RommClient = (function () {
 			const response = await fetch(_url + '/api/saves?rom_id=' + romId, {
 				method: 'POST',
 				headers: {
-					'Authorization': 'Bearer ' + _apiKey
+					'Authorization': 'Bearer ' + _apiToken
 				},
 				body: formData
 			});
@@ -319,7 +320,7 @@ const RommClient = (function () {
 			var startTime = Date.now();
 			const response = await fetch(url, {
 				headers: {
-					'Authorization': 'Bearer ' + _apiKey
+					'Authorization': 'Bearer ' + _apiToken
 				}
 			});
 			if (!response.ok)
@@ -332,23 +333,23 @@ const RommClient = (function () {
 		loadSettings: function () {
 			console.log('loadSettings: loading from localStorage');
 			_loadSettings();
-			console.log('loadSettings: loaded URL=' + (_url ? _url.substring(0, 40) + '...' : '(empty)') + ', API key set=' + (_apiKey ? 'yes' : 'no'));
+			console.log('loadSettings: loaded URL=' + (_url ? _url.substring(0, 40) + '...' : '(empty)') + ', API key set=' + (_apiToken ? 'yes' : 'no'));
 		},
 		saveSettings: function () {
 			_settings.url = _url;
-			_settings.apiKey = _apiKey;
+			_settings.apiToken = _apiToken;
 			console.log('saveSettings: saving to localStorage');
 			_saveSettings();
 		},
 		exportSettings: function () {
 			console.log('exportSettings: exporting config');
-			return JSON.stringify({ url: _url, apiKey: _apiKey }, null, 2);
+			return JSON.stringify({ url: _url, apiToken: _apiToken }, null, 2);
 		},
 		importSettings: function (jsonStr) {
 			const data = JSON.parse(jsonStr);
-			if (typeof data.url === 'string' && typeof data.apiKey === 'string') {
+			if (typeof data.url === 'string' && typeof data.apiToken === 'string') {
 				console.log('importSettings: importing config URL=' + data.url.substring(0, 40) + '...');
-				this.configure(data.url, data.apiKey);
+				this.configure(data.url, data.apiToken);
 				this.saveSettings();
 				return true;
 			}
@@ -365,7 +366,7 @@ const RommClient = (function () {
 			const startResponse = await fetch(_url + '/api/roms/upload/start', {
 				method: 'POST',
 				headers: {
-					'Authorization': 'Bearer ' + _apiKey,
+					'Authorization': 'Bearer ' + _apiToken,
 					'X-Upload-Platform': platformId.toString(),
 					'X-Upload-Filename': fileName,
 					'X-Upload-Total-Size': totalSize.toString(),
@@ -394,7 +395,7 @@ const RommClient = (function () {
 				const chunkResponse = await fetch(_url + '/api/roms/upload/' + uploadId, {
 					method: 'PUT',
 					headers: {
-						'Authorization': 'Bearer ' + _apiKey,
+						'Authorization': 'Bearer ' + _apiToken,
 						'Content-Type': 'application/octet-stream',
 						'X-Chunk-Index': i.toString()
 					},
@@ -406,7 +407,7 @@ const RommClient = (function () {
 						await fetch(_url + '/api/roms/upload/' + uploadId + '/cancel', {
 							method: 'POST',
 							headers: {
-								'Authorization': 'Bearer ' + _apiKey
+								'Authorization': 'Bearer ' + _apiToken
 							}
 						});
 					} catch (e) {}
@@ -427,7 +428,7 @@ const RommClient = (function () {
 			const completeResponse = await fetch(_url + '/api/roms/upload/' + uploadId + '/complete', {
 				method: 'POST',
 				headers: {
-					'Authorization': 'Bearer ' + _apiKey
+					'Authorization': 'Bearer ' + _apiToken
 				}
 			});
 			if (!completeResponse.ok) {
@@ -439,29 +440,33 @@ const RommClient = (function () {
 				} catch (e) {}
 				throw new Error(errorMsg);
 			}
+			console.log('uploadRom: completed upload id=' + uploadId);
 			return true;
 		},
 
-		// Trigger a rescan so newly uploaded files are picked up.
-		// Disabled: scan_library endpoint does not currently allow manual triggers.
-		// rescanLibrary: async function () {
-		// 	const response = await fetch(_url + '/api/tasks/run/scan_library', {
-		// 		method: 'POST',
-		// 		headers: {
-		// 			'Authorization': 'Bearer ' + _apiKey
-		// 		}
-		// 	});
-		// 	if (!response.ok) {
-		// 		let errorMsg = 'Rescan failed: HTTP ' + response.status;
-		// 		try {
-		// 			const errorData = await response.json();
-		// 			if (errorData.detail)
-		// 				errorMsg += ': ' + (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail));
-		// 		} catch (e) {}
-		// 		throw new Error(errorMsg);
-		// 	}
-		// 	return response.json();
-		// }
+		/* Trigger a library scan so newly uploaded files are picked up.
+		   POST /api/tasks/scan with type "quick" and the platform the ROM was uploaded to. */
+		scanLibrary: async function (platformId) {
+			const body = { type: 'quick', platforms: platformId ? [platformId] : [] };
+			const response = await fetch(_url + '/api/tasks/scan', {
+				method: 'POST',
+				headers: {
+					'Authorization': 'Bearer ' + _apiToken,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(body)
+			});
+			if (!response.ok) {
+				let errorMsg = 'Library scan failed: HTTP ' + response.status;
+				try {
+					const errorData = await response.json();
+					if (errorData.detail)
+						errorMsg += ': ' + (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail));
+				} catch (e) {}
+				throw new Error(errorMsg);
+			}
+			return response.json();
+		}
 	};
 })();
 

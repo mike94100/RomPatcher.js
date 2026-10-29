@@ -177,10 +177,16 @@
 					client.uploadRom(platformId, uploadName, buffer, function (loaded, total) {
 						var pct = Math.round(loaded / total * 100);
 						if (progressDiv) progressDiv.textContent = 'Uploading to RomM... ' + pct + '%';
-					}).then(function () {
+					}).then(async function () {
 						if (progressDiv) {
 							progressDiv.textContent = 'Upload complete!';
 							setTimeout(function () { progressDiv.style.display = 'none'; }, 3000);
+						}
+						try {
+							await client.scanLibrary(platformId);
+							console.log('Library scan queued for platform ' + platformId);
+						} catch (err) {
+							console.warn('Library scan failed (upload succeeded): ' + err.message);
 						}
 					}).catch(function (err) {
 						if (progressDiv) progressDiv.textContent = '';

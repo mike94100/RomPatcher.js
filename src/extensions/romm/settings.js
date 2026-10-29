@@ -21,11 +21,11 @@
 		}
 	};
 
-	const saveConfig = function(url, apiKey) {
-		console.log('saveConfig: saving URL=' + (url ? url.substring(0, 40) + '...' : '(empty)') + ', API key set=' + (apiKey ? 'yes' : 'no'));
+	const saveConfig = function(url, apiToken) {
+		console.log('saveConfig: saving URL=' + (url ? url.substring(0, 40) + '...' : '(empty)') + ', API Token set=' + (apiToken ? 'yes' : 'no'));
 		localStorage.setItem(SETTINGS_KEY, JSON.stringify({
 			url: url.replace(/\/+$/, ''),
-			apiKey: apiKey
+			apiToken: apiToken
 		}));
 	};
 
@@ -81,7 +81,7 @@
 
 	/* Check if RomM is configured and load full extension if so */
 	const config = loadConfig();
-	if (config.url && config.apiKey) {
+	if (config.url && config.apiToken) {
 		console.log('[ClientIntegration:romm:settings] RomM is configured, loading full extension');
 		loadFullExtension();
 	}
@@ -106,8 +106,8 @@
 					'<input type="url" id="romm-settings-url" placeholder="https://romm.example.com" style="width:100%;box-sizing:border-box;padding:6px" />',
 				'</div>',
 				'<div style="margin-bottom:10px">',
-					'<label for="romm-settings-api-key" style="display:block;font-size:12px;margin-bottom:2px">API Key</label>',
-					'<input type="password" id="romm-settings-api-key" placeholder="romm_xxxxxxxx..." style="width:100%;box-sizing:border-box;padding:6px" />',
+					'<label for="romm-settings-api-token" style="display:block;font-size:12px;margin-bottom:2px">API Token</label>',
+					'<input type="password" id="romm-settings-api-token" placeholder="rmm_xxxxxxxx..." style="width:100%;box-sizing:border-box;padding:6px" />',
 				'</div>',
 				'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">',
 					'<button id="romm-settings-save" class="rom-patcher-btn-small">Save & Reload</button>',
@@ -142,7 +142,7 @@
 		if (activeTab) activeTab.style.background = '#e0e0e0';
 
 		var urlInput = document.getElementById('romm-settings-url');
-		var keyInput = document.getElementById('romm-settings-api-key');
+		var keyInput = document.getElementById('romm-settings-api-token');
 		var saveBtn = document.getElementById('romm-settings-save');
 		var testBtn = document.getElementById('romm-settings-test');
 		var exportBtn = document.getElementById('romm-settings-export');
@@ -152,7 +152,7 @@
 		/* Load existing values */
 		const cfg = loadConfig();
 		if (cfg.url) urlInput.value = cfg.url;
-		if (cfg.apiKey) keyInput.value = cfg.apiKey;
+		if (cfg.apiToken) keyInput.value = cfg.apiToken;
 
 		/* Save & Reload */
 		if (saveBtn) {
@@ -168,7 +168,7 @@
 				const url = urlInput.value.trim().replace(/\/+$/, '');
 				const key = keyInput.value.trim();
 				if (!url || !key) {
-					showStatus('Please enter both URL and API Key.', true);
+					showStatus('Please enter both URL and API Token.', true);
 					return;
 				}
 				testBtn.disabled = true;
@@ -204,11 +204,11 @@
 		if (exportBtn) {
 			exportBtn.addEventListener('click', function() {
 				const cfg = loadConfig();
-				if (!cfg.url || !cfg.apiKey) {
+				if (!cfg.url || !cfg.apiToken) {
 					showStatus('No settings to export.', true);
 					return;
 				}
-				var json = JSON.stringify({ url: cfg.url, apiKey: cfg.apiKey }, null, 2);
+				var json = JSON.stringify({ url: cfg.url, apiToken: cfg.apiToken }, null, 2);
 				var blob = new Blob([json], { type: 'application/json' });
 				var url = URL.createObjectURL(blob);
 				var a = document.createElement('a');
@@ -235,8 +235,8 @@
 					reader.onload = function(ev) {
 						try {
 							const data = JSON.parse(ev.target.result);
-							if (data.url && data.apiKey) {
-								saveConfig(data.url, data.apiKey);
+							if (data.url && data.apiToken) {
+								saveConfig(data.url, data.apiToken);
 								showStatus('Settings imported. Reloading...', false);
 								setTimeout(function() { location.reload(); }, 1000);
 							} else {
